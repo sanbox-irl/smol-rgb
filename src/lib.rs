@@ -186,6 +186,23 @@ impl EncodedRgb {
     }
 }
 
+impl From<(u8, u8, u8, u8)> for EncodedRgb {
+    fn from(o: (u8, u8, u8, u8)) -> Self {
+        Self {
+            r: o.0,
+            g: o.1,
+            b: o.2,
+            a: o.3,
+        }
+    }
+}
+
+impl Into<(u8, u8, u8, u8)> for EncodedRgb {
+    fn into(self) -> (u8, u8, u8, u8) {
+        (self.r, self.g, self.b, self.a)
+    }
+}
+
 impl fmt::Debug for EncodedRgb {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("EncodedRgb")
@@ -254,9 +271,10 @@ impl LinearRgb {
     }
 
     /// Creates an array representation of the color. This is useful for sending the color
-    /// to a uniform, but is the same memory representation as `Self`.
+    /// to a uniform, but is the same memory representation as `Self`. [LinearRgb] also implements
+    /// Into, but this function is often more convenient.
     pub fn to_array(self) -> [f32; 4] {
-        [self.r, self.g, self.b, self.a]
+        self.into()
     }
 
     /// Encodes the 4 floats as 16 u8s. This is useful for sending the color
@@ -276,6 +294,18 @@ impl Into<[f32; 4]> for LinearRgb {
 impl From<[f32; 4]> for LinearRgb {
     fn from(o: [f32; 4]) -> Self {
         Self::new(o[0], o[1], o[2], o[3])
+    }
+}
+
+impl Into<(f32, f32, f32, f32)> for LinearRgb {
+    fn into(self) -> (f32, f32, f32, f32) {
+        (self.r, self.g, self.b, self.a)
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for LinearRgb {
+    fn from(o: (f32, f32, f32, f32)) -> Self {
+        Self::new(o.0, o.1, o.2, o.3)
     }
 }
 
