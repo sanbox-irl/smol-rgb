@@ -1,5 +1,8 @@
 # smol-rgb
 
+[![Documentation](https://docs.rs/smol-rgb/badge.svg)](https://docs.rs/smol-rgb/)
+[![Crates.io](https://img.shields.io/crates/v/smol-rgb.svg)](https://crates.io/crates/smol-rgb)
+
 A smol library for (s)Rgb color handling.
 
 ## Quick-start
