@@ -63,10 +63,6 @@ now they're in a place where they can be mixed with each other.
 Most of the time, in your library or application, your colors will be in `EncodedRgb`
 and you won't think much about it. If you use a tool like egui or imgui-rs, you'll set colors
 from those color picker applets directly into your `EncodedRgb` and call it a day.
-In fact, if you're working in something like Opengl or Vulkan, and you're passing in Colors
-in a Vertex Attribute, you may *still* use `EncodedRgb` in that circumstance, so long as
-you make sure to make that attribute normalized correctly (in [vulkan](https://www.khronos.org/registry/vulkan/specs/1.tensions/man/html/VkFormat.html),
-and in [opengl](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml)).
 
 And of course, I've said a few times now that Textures are in EncodedRgb, yet, of course,
 when you access them in a Shader, you can tint them with uniforms easily and correctly,
@@ -82,7 +78,8 @@ even be displaying those colors in EncodedRgb.
 ## When do I need to transfer EncodedRgb to LinearRgb myself?
 
 In two circumstances, for most programmers -- when you're blending colors yourself on the CPU, or when
-you're sending a color to a uniform to be blended with another LinearRgb color (like a sampled texture) on the GPU.
+you're sending a color to a vertex or a uniform to be blended with another LinearRgb color (like a sampled texture) on the GPU.
+
 You might think to yourself that you commonly sent colors before you read this in "what you're calling 'EncodedRgb'" and
 it worked out just fine. That's probably true! Almost all games have some color error, because it's just so easy to do
 accidentally. However, I might point out that probably you or an artist just fiddled with the encoded color until it
