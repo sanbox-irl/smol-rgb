@@ -121,8 +121,7 @@ pub struct EncodedRgb {
     /// The blue component of the color.
     pub b: u8,
 
-    /// The alpha component of the color. This is the opacity of the color
-    /// in most contexts, though can be used for nearly anything if necessary.
+    /// The alpha component of the color, normally the opacity in blending operations.
     pub a: u8,
 }
 
