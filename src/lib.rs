@@ -96,8 +96,6 @@
 
 #![deny(missing_docs, broken_intra_doc_links)]
 #![no_std]
-// keep the std when we're running tests
-#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -281,7 +279,7 @@ impl LinearRgb {
     /// to a uniform, but is the same memory representation as `Self` -- ie,
     /// the bits have just been reinterpreted as 16 u8s, but they're still secret floats.
     pub fn to_bits(self) -> [u8; 16] {
-        unsafe { std::mem::transmute(self.to_array()) }
+        unsafe { core::mem::transmute(self.to_array()) }
     }
 }
 
