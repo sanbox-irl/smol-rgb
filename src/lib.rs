@@ -111,6 +111,7 @@ use core::fmt;
 /// color space into a different color, [LinearRgb], with [to_linear](Self::to_linear)
 /// before we do such operations.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(C)]
 pub struct EncodedRgb {
     /// The red component of the color.
     pub r: u8,
@@ -181,6 +182,77 @@ impl EncodedRgb {
             (input[3] * 255.0) as u8,
         )
     }
+
+    /// Converts a packed u32 to an encoded rgba struct.
+    ///
+    /// Note, your colors must be in order of `red, green, blue, alpha`. For `bgra` support,
+    /// use `from_bgra_u32`.
+    ///
+    /// This function might also has issues on non-little endian platforms, but look, you're not
+    /// on one of those.
+    pub fn from_rgba_u32(input: u32) -> Self {
+        let bytes = input.to_ne_bytes();
+
+        Self {
+            r: bytes[3],
+            g: bytes[2],
+            b: bytes[1],
+            a: bytes[0],
+        }
+    }
+
+    /// Converts the encoded rgba struct to a packed u32 in `rgba` encoding.
+    ///
+    /// This will output your colors in order of `red, green, blue, alpha`. For `bgra` support,
+    /// use `to_bgra_u32`.
+    ///
+    /// This function might also have issues on non-little endian platforms, but look, you're not
+    /// on one of those.
+    pub fn to_rgba_u32(self) -> u32 {
+        let mut bytes = [0, 0, 0, 0];
+
+        bytes[3] = self.r;
+        bytes[2] = self.g;
+        bytes[1] = self.b;
+        bytes[0] = self.a;
+
+        u32::from_ne_bytes(bytes)
+    }
+
+    /// Converts a packed u32 to an encoded rgba struct. On little endian platforms, this is a no-op.
+    ///
+    /// Note, your colors must be in order of `blue`, `green`, `red`, `alpha`.
+    ///
+    /// This function might also has issues on non-little endian platforms, but look, you're not
+    /// on one of those probably.
+    pub fn from_bgra_u32(input: u32) -> Self {
+        let bytes = input.to_ne_bytes();
+
+        Self {
+            r: bytes[1],
+            g: bytes[2],
+            b: bytes[3],
+            a: bytes[0],
+        }
+    }
+
+    /// Converts the encoded rgba struct to a packed u32 in `bgra` encoding.
+    ///
+    /// This will output your colors in order of `red, green, blue, alpha`. For `bgra` support,
+    /// use `to_bgra_u32`.
+    ///
+    /// This function might also have issues on non-little endian platforms, but look, you're not
+    /// on one of those.
+    pub fn to_bgra_u32(self) -> u32 {
+        let mut bytes = [0, 0, 0, 0];
+
+        bytes[1] = self.r;
+        bytes[2] = self.g;
+        bytes[3] = self.b;
+        bytes[0] = self.a;
+
+        u32::from_ne_bytes(bytes)
+    }
 }
 
 impl From<(u8, u8, u8, u8)> for EncodedRgb {
@@ -218,6 +290,23 @@ impl fmt::Display for EncodedRgb {
             "r: {}, g: {}, b: {}, a: {}, {:x}{:x}{:x}{:x}",
             self.r, self.g, self.b, self.a, self.r, self.g, self.b, self.a
         )
+    }
+}
+
+// we use rgba encoding, for simplicity...
+impl fmt::LowerHex for EncodedRgb {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.to_rgba_u32();
+
+        fmt::LowerHex::fmt(&val, f)
+    }
+}
+
+impl fmt::UpperHex for EncodedRgb {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.to_rgba_u32();
+
+        fmt::UpperHex::fmt(&val, f)
     }
 }
 
@@ -466,6 +555,32 @@ mod tests {
 
     static_assertions::assert_eq_align!(EncodedRgb, u8);
     static_assertions::assert_eq_size!(EncodedRgb, [u8; 4]);
+
+    #[test]
+    fn from_u32s() {
+        let cornwall_blue_in_rgba: u32 = 0x6b9ebeff;
+        let cornwall_blue_in_bgra: u32 = 0xbe9e6bff;
+        let cornwall_encoded = EncodedRgb {
+            r: 107,
+            g: 158,
+            b: 190,
+            a: 255,
+        };
+        let encoded_rgba = EncodedRgb::from_rgba_u32(cornwall_blue_in_rgba);
+        assert_eq!(encoded_rgba, cornwall_encoded);
+        assert_eq!(encoded_rgba.to_rgba_u32(), cornwall_blue_in_rgba);
+
+        let encoded_bgra = EncodedRgb::from_bgra_u32(cornwall_blue_in_bgra);
+        assert_eq!(encoded_bgra, cornwall_encoded);
+        assert_eq!(encoded_bgra.to_bgra_u32(), cornwall_blue_in_bgra);
+
+        // and finally, check the hex...
+        let rgba_as_hex = std::format!("{:x}", encoded_rgba);
+        assert_eq!(rgba_as_hex, "6b9ebeff");
+
+        let rgba_as_hex = std::format!("{:#X}", encoded_rgba);
+        assert_eq!(rgba_as_hex, "0x6B9EBEFF");
+    }
 
     #[test]
     fn encoding_decoding() {
