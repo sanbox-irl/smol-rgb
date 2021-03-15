@@ -136,12 +136,16 @@ impl EncodedRgb {
     /// A black (0, 0, 0, 0) with zero opacity.
     pub const CLEAR: EncodedRgb = EncodedRgb::new(0, 0, 0, 0);
 
+    /// God's color (255, 0, 255, 255). The color of choice for graphics testing.
+    pub const FUCHSIA: EncodedRgb = EncodedRgb::new(255, 0, 255, 255);
+
     /// Creates a new encoded 32bit color.
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
     /// Transforms this color into the Linear color space.
+    #[inline]
     pub fn to_linear(self) -> LinearRgb {
         LinearRgb {
             r: encoded_to_linear(self.r),
@@ -158,6 +162,7 @@ impl EncodedRgb {
     /// We use this dedicated function, rather than a `From` or `Into` because
     /// this is an unusual use of f32s, and in general, this module acts as if
     /// f32 == Linear and u8 == Encoded, though this is not technically true.
+    #[inline]
     pub fn to_encoded_f32s(self) -> [f32; 4] {
         [
             self.r as f32 / 255.0,
@@ -174,6 +179,7 @@ impl EncodedRgb {
     /// We use this dedicated function, rather than a `From` or `Into` because
     /// this is an unusual use of f32s, and in general, this module acts as if
     /// f32 == Linear and u8 == Encoded, though this is not technically true.
+    #[inline]
     pub fn from_encoded_f32s(input: [f32; 4]) -> Self {
         Self::new(
             (input[0] * 255.0) as u8,
@@ -190,7 +196,8 @@ impl EncodedRgb {
     ///
     /// This function might also has issues on non-little endian platforms, but look, you're not
     /// on one of those.
-    pub fn from_rgba_u32(input: u32) -> Self {
+    #[inline]
+    pub const fn from_rgba_u32(input: u32) -> Self {
         let bytes = input.to_ne_bytes();
 
         Self {
@@ -208,7 +215,8 @@ impl EncodedRgb {
     ///
     /// This function might also have issues on non-little endian platforms, but look, you're not
     /// on one of those.
-    pub fn to_rgba_u32(self) -> u32 {
+    #[inline]
+    pub const fn to_rgba_u32(self) -> u32 {
         let mut bytes = [0, 0, 0, 0];
 
         bytes[3] = self.r;
@@ -225,7 +233,8 @@ impl EncodedRgb {
     ///
     /// This function might also has issues on non-little endian platforms, but look, you're not
     /// on one of those probably.
-    pub fn from_bgra_u32(input: u32) -> Self {
+    #[inline]
+    pub const fn from_bgra_u32(input: u32) -> Self {
         let bytes = input.to_ne_bytes();
 
         Self {
@@ -243,7 +252,8 @@ impl EncodedRgb {
     ///
     /// This function might also have issues on non-little endian platforms, but look, you're not
     /// on one of those.
-    pub fn to_bgra_u32(self) -> u32 {
+    #[inline]
+    pub const fn to_bgra_u32(self) -> u32 {
         let mut bytes = [0, 0, 0, 0];
 
         bytes[1] = self.r;
@@ -342,12 +352,14 @@ impl LinearRgb {
     /// **You probably don't want to use this function.**
     /// This creates a color in the LinearColor space directly. For this function to be valid,
     /// the colors given to this function **must be in the linear space already.**
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+    #[inline]
+    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
     /// Transforms this color into the Encoded color space. Use this space to serialize
     /// colors.
+    #[inline]
     pub fn to_encoded_space(self) -> EncodedRgb {
         EncodedRgb {
             r: linear_to_encoded(self.r),
@@ -360,6 +372,7 @@ impl LinearRgb {
     /// Creates an array representation of the color. This is useful for sending the color
     /// to a uniform, but is the same memory representation as `Self`. [LinearRgb] also implements
     /// Into, but this function is often more convenient.
+    #[inline]
     pub fn to_array(self) -> [f32; 4] {
         self.into()
     }
@@ -367,6 +380,7 @@ impl LinearRgb {
     /// Encodes the 4 floats as 16 u8s. This is useful for sending the color
     /// to a uniform, but is the same memory representation as `Self` -- ie,
     /// the bits have just been reinterpreted as 16 u8s, but they're still secret floats.
+    #[inline]
     pub fn to_bits(self) -> [u8; 16] {
         unsafe { core::mem::transmute(self.to_array()) }
     }
@@ -681,7 +695,7 @@ mod tests {
                 c / 12.92
             }) as f32
         }
-        
+
         let expect = (0..=255u8)
             .map(srgb_to_linear_high_precision)
             .collect::<std::vec::Vec<_>>();
