@@ -110,7 +110,7 @@ use core::fmt;
 /// to perform mixing operations *between* colors in, so we must convert this
 /// color space into a different color, [LinearRgb], with [to_linear](Self::to_linear)
 /// before we do such operations.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[repr(C)]
 pub struct EncodedRgb {
     /// The red component of the color.
@@ -333,7 +333,7 @@ impl fmt::UpperHex for EncodedRgb {
 /// color pickers (like photoshop), and outputted surface (like if you use a Color Picker on a game)
 /// will all be in the encoded RGB space. Exceptions abound though, so it is possible to directly
 /// create this color.
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
 pub struct LinearRgb {
     /// The red component of the color.
     pub r: f32,
