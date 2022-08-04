@@ -263,6 +263,16 @@ impl EncodedColor {
 
         u32::from_ne_bytes(bytes)
     }
+
+    /// Recasts four u8s into `EncodedColor`
+    pub const fn from_bits_u32(value: u32) -> Self {
+        unsafe { core::mem::transmute(value) }
+    }
+
+    /// Recasts four u8s into `EncodedColor`
+    pub const fn from_bits(value: [u8; 4]) -> Self {
+        unsafe { core::mem::transmute(value) }
+    }
 }
 
 impl From<(u8, u8, u8, u8)> for EncodedColor {
@@ -383,6 +393,12 @@ impl LinearColor {
     #[inline]
     pub fn to_bits(self) -> [u8; 16] {
         unsafe { core::mem::transmute(self.to_array()) }
+    }
+
+    /// Recasts four u8s into floats. Note: these floats could be subnormal if these u8s
+    /// were produced incorrectly.
+    pub fn from_bits(value: [u8; 16]) -> Self {
+        unsafe { core::mem::transmute(value) }
     }
 }
 
