@@ -2,7 +2,7 @@
 name = "smol-rgb"
 version = "0.1.2"
 authors = ["Jonathan Spira <jjspira@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/sanbox-irl/smol-rgb"
 description = "A smol library for (s)Rgb color handling."

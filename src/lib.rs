@@ -39,8 +39,8 @@
 //! In this library, that means 4 u8s, each of which describe how much `r`, `g`, `b`, and `a`
 //! should be in an image. On a very technical level, this is a specification called
 //! IEC 61966-2-1:1999, but you should never remember this again. In this library, this space is
-//! called `EncodedRgb`. If you use photoshop and use the color picker on a color (generally),
-//! the number you get out is going to be in encoded sRGB, which this library handles in EncodedRgb.
+//! called `EncodedColor`. If you use photoshop and use the color picker on a color (generally),
+//! the number you get out is going to be in encoded sRGB, which this library handles in EncodedColor.
 //! That "generally" might have worried you; unless you know you did something odd, however, it shouldn't.
 //! If you're authoring texture in Photoshop or in Aseprite, you'll be working in sRGB (unless you make
 //! it so you aren't, but don't do that).
@@ -48,39 +48,39 @@
 //! Encoded sRGB is just the bee's knees, except that it's basically useless to *do* things in.
 //! When you want to *blend* colors (add them, multiply them, basically do anything to them),
 //! you need to convert those colors into "linear" space. In this library, we call this `LinearColor`.
-//! Whereas `EncodedRgb` is just 4 u8s, `LinearColor` is 4 f32s, each of which has been transferred
+//! Whereas `EncodedColor` is just 4 u8s, `LinearColor` is 4 f32s, each of which has been transferred
 //! from "encoded" space to "linear" space. The more complete terms would be that they have been
 //! transferred from "encoded sRGB" to "linear sRGB", but don't think about it too much -- basically,
 //! now they're in a place where they can be mixed with each other.
 //!
 //! # When does this happen Magically?
 //!
-//! Most of the time, in your library or application, your colors will be in `EncodedRgb`
+//! Most of the time, in your library or application, your colors will be in `EncodedColor`
 //! and you won't think much about it. If you use a tool like egui or imgui-rs, you'll set colors
-//! from those color picker applets directly into your `EncodedRgb` and call it a day.
+//! from those color picker applets directly into your `EncodedColor` and call it a day.
 //! In fact, if you're working in something like Opengl or Vulkan, and you're passing in Colors
-//! in a Vertex Attribute, you may *still* use `EncodedRgb` in that circumstance, so long as
+//! in a Vertex Attribute, you may *still* use `EncodedColor` in that circumstance, so long as
 //! you make sure to make that attribute normalized correctly (in [vulkan](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkFormat.html),
 //! and in [opengl](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml)).
 //!
-//! And of course, I've said a few times now that Textures are in EncodedRgb, yet, of course,
+//! And of course, I've said a few times now that Textures are in EncodedColor, yet, of course,
 //! when you access them in a Shader, you can tint them with uniforms easily and correctly,
 //! so they must also be in linear at that stage, right?
 //!
-//! The answer is yes! The GPU, when it samples a texture, will convert it into LinearRgb *for you.*
+//! The answer is yes! The GPU, when it samples a texture, will convert it into LinearColor *for you.*
 //! It will also, if you've set up your vertex attributes like above, do the same for those.
 //!
 //! Even more confusingly, after your fragment shader is done working in linear colors, it will (generally)
-//! be converted *back* into EncodedRgb for final output. This is why if you use a color picker on your screen,
-//! you'll still be getting EncodedRgb colors out! If your monitor itself is in sRgb (and many are), then you'll
-//! even be displaying those colors in EncodedRgb.
+//! be converted *back* into EncodedColor for final output. This is why if you use a color picker on your screen,
+//! you'll still be getting EncodedColor colors out! If your monitor itself is in sRgb (and many are), then you'll
+//! even be displaying those colors in EncodedColor.
 //!
-//! # When do I need to transfer EncodedRgb to LinearRgb myself?
+//! # When do I need to transfer EncodedColor to LinearColor myself?
 //!
 //! In two circumstances, for most programmers -- when you're blending colors yourself on the CPU, or when
-//! you're sending a color to a uniform to be blended with another LinearRgb color (like a sampled texture) on the GPU.
+//! you're sending a color to a uniform to be blended with another LinearColor color (like a sampled texture) on the GPU.
 //!
-//! You might think to yourself that you commonly sent colors before you read this in "what you're calling 'EncodedRgb'" and
+//! You might think to yourself that you commonly sent colors before you read this in "what you're calling 'EncodedColor'" and
 //! it worked out just fine. That's probably true! Almost all games have some color error, because it's just so easy to do
 //! accidentally. However, I might point out that probably you or an artist just fiddled with the encoded color until it
 //! mixed correctly, so it looked more or less right on the GPU. Or perhaps there was some other weirdness going on!
@@ -94,7 +94,7 @@
 //! If this library picks up enough traction, users might want to split it into `Rgb` and `Rgba`. Leave an issue
 //! if that's desired.
 
-#![deny(missing_docs, broken_intra_doc_links)]
+#![deny(missing_docs, rustdoc::broken_intra_doc_links)]
 #![no_std]
 
 #[cfg(feature = "std")]
@@ -108,11 +108,11 @@ use core::fmt;
 /// In code, we will say that this Color is `encoded`. This is generally the same
 /// colorspace that texels in a texture are in. This color space is not valid
 /// to perform mixing operations *between* colors in, so we must convert this
-/// color space into a different color, [LinearRgb], with [to_linear](Self::to_linear)
+/// color space into a different color, [LinearColor], with [to_linear](Self::to_linear)
 /// before we do such operations.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[repr(C)]
-pub struct EncodedRgb {
+pub struct EncodedColor {
     /// The red component of the color.
     pub r: u8,
 
@@ -126,18 +126,18 @@ pub struct EncodedRgb {
     pub a: u8,
 }
 
-impl EncodedRgb {
+impl EncodedColor {
     /// A basic white (255, 255, 255, 255) with full opacity.
-    pub const WHITE: EncodedRgb = EncodedRgb::new(255, 255, 255, 255);
+    pub const WHITE: EncodedColor = EncodedColor::new(255, 255, 255, 255);
 
     /// A basic black (0, 0, 0, 255) with full opacity.
-    pub const BLACK: EncodedRgb = EncodedRgb::new(0, 0, 0, 255);
+    pub const BLACK: EncodedColor = EncodedColor::new(0, 0, 0, 255);
 
     /// A black (0, 0, 0, 0) with zero opacity.
-    pub const CLEAR: EncodedRgb = EncodedRgb::new(0, 0, 0, 0);
+    pub const CLEAR: EncodedColor = EncodedColor::new(0, 0, 0, 0);
 
     /// God's color (255, 0, 255, 255). The color of choice for graphics testing.
-    pub const FUCHSIA: EncodedRgb = EncodedRgb::new(255, 0, 255, 255);
+    pub const FUCHSIA: EncodedColor = EncodedColor::new(255, 0, 255, 255);
 
     /// Creates a new encoded 32bit color.
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
@@ -146,8 +146,8 @@ impl EncodedRgb {
 
     /// Transforms this color into the Linear color space.
     #[inline]
-    pub fn to_linear(self) -> LinearRgb {
-        LinearRgb {
+    pub fn to_linear(self) -> LinearColor {
+        LinearColor {
             r: encoded_to_linear(self.r),
             g: encoded_to_linear(self.g),
             b: encoded_to_linear(self.b),
@@ -265,7 +265,7 @@ impl EncodedRgb {
     }
 }
 
-impl From<(u8, u8, u8, u8)> for EncodedRgb {
+impl From<(u8, u8, u8, u8)> for EncodedColor {
     fn from(o: (u8, u8, u8, u8)) -> Self {
         Self {
             r: o.0,
@@ -276,15 +276,15 @@ impl From<(u8, u8, u8, u8)> for EncodedRgb {
     }
 }
 
-impl Into<(u8, u8, u8, u8)> for EncodedRgb {
-    fn into(self) -> (u8, u8, u8, u8) {
-        (self.r, self.g, self.b, self.a)
+impl From<EncodedColor> for (u8, u8, u8, u8) {
+    fn from(o: EncodedColor) -> Self {
+        (o.r, o.g, o.b, o.a)
     }
 }
 
-impl fmt::Debug for EncodedRgb {
+impl fmt::Debug for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("EncodedRgb")
+        f.debug_tuple("EncodedColor")
             .field(&self.r)
             .field(&self.g)
             .field(&self.b)
@@ -293,7 +293,7 @@ impl fmt::Debug for EncodedRgb {
     }
 }
 
-impl fmt::Display for EncodedRgb {
+impl fmt::Display for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -304,7 +304,7 @@ impl fmt::Display for EncodedRgb {
 }
 
 // we use rgba encoding, for simplicity...
-impl fmt::LowerHex for EncodedRgb {
+impl fmt::LowerHex for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.to_rgba_u32();
 
@@ -313,7 +313,7 @@ impl fmt::LowerHex for EncodedRgb {
 }
 
 // we use rgba encoding, for simplicity...
-impl fmt::UpperHex for EncodedRgb {
+impl fmt::UpperHex for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.to_rgba_u32();
 
@@ -325,8 +325,8 @@ impl fmt::UpperHex for EncodedRgb {
 /// "linear sRGB". You should use this color space when blending colors on the CPU
 /// or when sending uniforms to a linear card.
 ///
-/// Colors on disc are [EncodedRgb], but to blend them correctly, you need to move them
-/// into the `linear` color space with [to_linear](EncodedRgb::to_linear).
+/// Colors on disc are [EncodedColor], but to blend them correctly, you need to move them
+/// into the `linear` color space with [to_linear](EncodedColor::to_linear).
 ///
 /// You *can* directly create this struct, but you probably don't want to. You'd need already
 /// linear sRGB to correctly make this struct -- that's possible to have, but generally, textures,
@@ -334,7 +334,7 @@ impl fmt::UpperHex for EncodedRgb {
 /// will all be in the encoded RGB space. Exceptions abound though, so it is possible to directly
 /// create this color.
 #[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
-pub struct LinearRgb {
+pub struct LinearColor {
     /// The red component of the color.
     pub r: f32,
 
@@ -348,7 +348,7 @@ pub struct LinearRgb {
     pub a: f32,
 }
 
-impl LinearRgb {
+impl LinearColor {
     /// **You probably don't want to use this function.**
     /// This creates a color in the LinearColor space directly. For this function to be valid,
     /// the colors given to this function **must be in the linear space already.**
@@ -360,8 +360,8 @@ impl LinearRgb {
     /// Transforms this color into the Encoded color space. Use this space to serialize
     /// colors.
     #[inline]
-    pub fn to_encoded_space(self) -> EncodedRgb {
-        EncodedRgb {
+    pub fn to_encoded_space(self) -> EncodedColor {
+        EncodedColor {
             r: linear_to_encoded(self.r),
             g: linear_to_encoded(self.g),
             b: linear_to_encoded(self.b),
@@ -370,7 +370,7 @@ impl LinearRgb {
     }
 
     /// Creates an array representation of the color. This is useful for sending the color
-    /// to a uniform, but is the same memory representation as `Self`. [LinearRgb] also implements
+    /// to a uniform, but is the same memory representation as `Self`. [LinearColor] also implements
     /// Into, but this function is often more convenient.
     #[inline]
     pub fn to_array(self) -> [f32; 4] {
@@ -386,33 +386,33 @@ impl LinearRgb {
     }
 }
 
-impl Into<[f32; 4]> for LinearRgb {
-    fn into(self) -> [f32; 4] {
-        [self.r, self.g, self.b, self.a]
+impl From<LinearColor> for [f32; 4] {
+    fn from(o: LinearColor) -> Self {
+        [o.r, o.g, o.b, o.a]
     }
 }
 
-impl From<[f32; 4]> for LinearRgb {
+impl From<[f32; 4]> for LinearColor {
     fn from(o: [f32; 4]) -> Self {
         Self::new(o[0], o[1], o[2], o[3])
     }
 }
 
-impl Into<(f32, f32, f32, f32)> for LinearRgb {
-    fn into(self) -> (f32, f32, f32, f32) {
-        (self.r, self.g, self.b, self.a)
+impl From<LinearColor> for (f32, f32, f32, f32) {
+    fn from(o: LinearColor) -> Self {
+        (o.r, o.g, o.b, o.a)
     }
 }
 
-impl From<(f32, f32, f32, f32)> for LinearRgb {
+impl From<(f32, f32, f32, f32)> for LinearColor {
     fn from(o: (f32, f32, f32, f32)) -> Self {
         Self::new(o.0, o.1, o.2, o.3)
     }
 }
 
-impl fmt::Debug for LinearRgb {
+impl fmt::Debug for LinearColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("LinearRgb")
+        f.debug_tuple("LinearColor")
             .field(&self.r)
             .field(&self.g)
             .field(&self.b)
@@ -421,7 +421,7 @@ impl fmt::Debug for LinearRgb {
     }
 }
 
-impl fmt::Display for LinearRgb {
+impl fmt::Display for LinearColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -431,14 +431,14 @@ impl fmt::Display for LinearRgb {
     }
 }
 
-impl From<LinearRgb> for EncodedRgb {
-    fn from(o: LinearRgb) -> Self {
+impl From<LinearColor> for EncodedColor {
+    fn from(o: LinearColor) -> Self {
         o.to_encoded_space()
     }
 }
 
-impl From<EncodedRgb> for LinearRgb {
-    fn from(o: EncodedRgb) -> Self {
+impl From<EncodedColor> for LinearColor {
+    fn from(o: EncodedColor) -> Self {
         o.to_linear()
     }
 }
@@ -548,20 +548,20 @@ pub fn linear_to_encoded(input: f32) -> u8 {
 }
 
 #[cfg(feature = "bytemuck")]
-unsafe impl bytemuck::Pod for EncodedRgb {}
+unsafe impl bytemuck::Pod for EncodedColor {}
 #[cfg(feature = "bytemuck")]
-unsafe impl bytemuck::Zeroable for EncodedRgb {}
+unsafe impl bytemuck::Zeroable for EncodedColor {}
 
 #[cfg(feature = "bytemuck")]
-unsafe impl bytemuck::Pod for LinearRgb {}
+unsafe impl bytemuck::Pod for LinearColor {}
 #[cfg(feature = "bytemuck")]
-unsafe impl bytemuck::Zeroable for LinearRgb {}
+unsafe impl bytemuck::Zeroable for LinearColor {}
 
 #[cfg(feature = "serde")]
 const ENCODED_NAME: &str = "Encoded Rgb";
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for EncodedRgb {
+impl serde::Serialize for EncodedColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -579,7 +579,7 @@ impl serde::Serialize for EncodedRgb {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for EncodedRgb {
+impl<'de> serde::Deserialize<'de> for EncodedColor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -587,7 +587,7 @@ impl<'de> serde::Deserialize<'de> for EncodedRgb {
         struct DeserializeColor;
 
         impl<'de> serde::de::Visitor<'de> for DeserializeColor {
-            type Value = EncodedRgb;
+            type Value = EncodedColor;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence of u8 colors")
@@ -613,7 +613,7 @@ impl<'de> serde::Deserialize<'de> for EncodedRgb {
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(3, &self))?;
 
-                Ok(EncodedRgb { r, g, b, a })
+                Ok(EncodedColor { r, g, b, a })
             }
         }
 
@@ -625,24 +625,24 @@ impl<'de> serde::Deserialize<'de> for EncodedRgb {
 mod tests {
     use super::*;
 
-    static_assertions::assert_eq_align!(EncodedRgb, u8);
-    static_assertions::assert_eq_size!(EncodedRgb, [u8; 4]);
+    static_assertions::assert_eq_align!(EncodedColor, u8);
+    static_assertions::assert_eq_size!(EncodedColor, [u8; 4]);
 
     #[test]
     fn from_u32s() {
         let cornwall_blue_in_rgba: u32 = 0x6b9ebeff;
         let cornwall_blue_in_bgra: u32 = 0xbe9e6bff;
-        let cornwall_encoded = EncodedRgb {
+        let cornwall_encoded = EncodedColor {
             r: 107,
             g: 158,
             b: 190,
             a: 255,
         };
-        let encoded_rgba = EncodedRgb::from_rgba_u32(cornwall_blue_in_rgba);
+        let encoded_rgba = EncodedColor::from_rgba_u32(cornwall_blue_in_rgba);
         assert_eq!(encoded_rgba, cornwall_encoded);
         assert_eq!(encoded_rgba.to_rgba_u32(), cornwall_blue_in_rgba);
 
-        let encoded_bgra = EncodedRgb::from_bgra_u32(cornwall_blue_in_bgra);
+        let encoded_bgra = EncodedColor::from_bgra_u32(cornwall_blue_in_bgra);
         assert_eq!(encoded_bgra, cornwall_encoded);
         assert_eq!(encoded_bgra.to_bgra_u32(), cornwall_blue_in_bgra);
 
@@ -706,9 +706,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn serde() {
         // json
-        let color = EncodedRgb::new(50, 50, 50, 255);
+        let color = EncodedColor::new(50, 50, 50, 255);
         let serialized = serde_json::to_string(&color).unwrap();
         assert_eq!("[50,50,50,255]", serialized);
         let deserialized = serde_json::from_str(&serialized).unwrap();
@@ -722,35 +723,35 @@ mod tests {
 
         // more yaml (look I use serde_yaml)
         let start = "---\n- 22\n- 33\n- 100\n- 210";
-        let color: EncodedRgb = serde_yaml::from_str(start).unwrap();
-        let base = EncodedRgb::new(22, 33, 100, 210);
+        let color: EncodedColor = serde_yaml::from_str(start).unwrap();
+        let base = EncodedColor::new(22, 33, 100, 210);
         assert_eq!(color, base);
 
         // bad serds
-        let o = serde_yaml::from_str::<EncodedRgb>("[0.2, 50, 50, 255]");
+        let o = serde_yaml::from_str::<EncodedColor>("[0.2, 50, 50, 255]");
         assert!(o.is_err());
-        let o = serde_yaml::from_str::<EncodedRgb>("[20, 50, 50, 256]");
+        let o = serde_yaml::from_str::<EncodedColor>("[20, 50, 50, 256]");
         assert!(o.is_err());
-        let o = serde_yaml::from_str::<EncodedRgb>("[20, 50, 245]");
+        let o = serde_yaml::from_str::<EncodedColor>("[20, 50, 245]");
         assert!(o.is_err());
-        let o = serde_yaml::from_str::<EncodedRgb>("[-20, 20, 50, 255]");
+        let o = serde_yaml::from_str::<EncodedColor>("[-20, 20, 50, 255]");
         assert!(o.is_err());
-        let o = serde_yaml::from_str::<EncodedRgb>("[20, 20, 50, 255, 255]");
+        let o = serde_yaml::from_str::<EncodedColor>("[20, 20, 50, 255, 255]");
         assert!(o.is_err());
 
         // and the big chungus, bincode
-        let color = EncodedRgb::new(44, 232, 8, 255);
+        let color = EncodedColor::new(44, 232, 8, 255);
         let buff = bincode::serialize(&color).unwrap();
         assert_eq!(buff, [44, 232, 8, 255]);
 
-        let color = EncodedRgb::new(200, 21, 22, 203);
+        let color = EncodedColor::new(200, 21, 22, 203);
         let buff = bincode::serialize(&color).unwrap();
         assert_eq!(buff, [200, 21, 22, 203]);
-        let round_trip_color: EncodedRgb = bincode::deserialize(&buff).unwrap();
+        let round_trip_color: EncodedColor = bincode::deserialize(&buff).unwrap();
         assert_eq!(color, round_trip_color);
 
         let buf = [14u8, 12, 3];
-        let o = bincode::deserialize::<EncodedRgb>(bytemuck::cast_slice(&buf));
+        let o = bincode::deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
         assert!(o.is_err());
 
         // okay and now with options, because otherwise it's hard to get errors
@@ -759,15 +760,15 @@ mod tests {
         let deserialize = bincode::DefaultOptions::new();
 
         let buf = [14, 12];
-        let o = deserialize.deserialize::<EncodedRgb>(bytemuck::cast_slice(&buf));
+        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
         assert!(o.is_err());
 
         let buf = [14u64];
-        let o = deserialize.deserialize::<EncodedRgb>(bytemuck::cast_slice(&buf));
+        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
         assert!(o.is_err());
 
         let buf = [31.0f32];
-        let o = deserialize.deserialize::<EncodedRgb>(bytemuck::cast_slice(&buf));
+        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
         // lol, i don't like this. is there a way to make this not work? if you see this
         // and know the answer, please PR me!
         assert!(o.is_ok());
