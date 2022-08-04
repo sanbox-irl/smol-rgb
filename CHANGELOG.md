@@ -1,9 +1,10 @@
 # Change Log
 
-All notable changes to this project will be documented in this file.
+## [0.2.0] - 2021-04-01
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/)
-and this project adheres to [Semantic Versioning](http://semver.org/).
+- Renamed `EncodedRgb` and `LinearRgb` to `EncodedColor` and `LinearRgb`. This is simpler
+  to understand for users and avoids ignoring the `a` component.
+- Added the `rand` dependency
 
 ## [0.1.2] - 2021-04-01
 

@@ -621,6 +621,30 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
     }
 }
 
+#[cfg(feature = "rand")]
+impl rand::distributions::Distribution<EncodedColor> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EncodedColor {
+        EncodedColor {
+            r: rng.gen(),
+            g: rng.gen(),
+            b: rng.gen(),
+            a: rng.gen(),
+        }
+    }
+}
+
+#[cfg(feature = "rand")]
+impl rand::distributions::Distribution<LinearColor> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> LinearColor {
+        LinearColor {
+            r: rng.gen(),
+            g: rng.gen(),
+            b: rng.gen(),
+            a: rng.gen(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
