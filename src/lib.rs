@@ -686,19 +686,21 @@ mod tests {
         assert_eq!(encoded_bgra, cornwall_encoded);
         assert_eq!(encoded_bgra.to_bgra_u32(), cornwall_blue_in_bgra);
 
-        // and finally, check the hex...
-        let rgba_as_hex = std::format!("{:x}", encoded_rgba);
-        assert_eq!(rgba_as_hex, "6b9ebeff");
+        #[cfg(feature = "std")]
+        {
+            // and finally, check the hex...
+            let rgba_as_hex = std::format!("{:x}", encoded_rgba);
+            assert_eq!(rgba_as_hex, "6b9ebeff");
 
-        let rgba_as_hex = std::format!("{:#X}", encoded_rgba);
-        assert_eq!(rgba_as_hex, "0x6B9EBEFF");
+            let rgba_as_hex = std::format!("{:#X}", encoded_rgba);
+            assert_eq!(rgba_as_hex, "0x6B9EBEFF");
+        }
     }
 
     #[test]
     fn encoding_decoding() {
         fn encode(input: u8, output: f32) {
             let o = encoded_to_linear(input);
-            std::println!("Expected {}, got {}", output, o);
             assert!((o - output).abs() < f32::EPSILON);
         }
 
@@ -724,6 +726,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::float_cmp)]
+    #[cfg(feature = "std")]
     fn test_lut() {
         // does computation with 64 bits of precision since we can spare it for
         // the LUT
