@@ -2,9 +2,8 @@
 
 ## [0.2.0] - 2021-04-01
 
-- Renamed `EncodedRgb` and `LinearRgb` to `EncodedColor` and `LinearRgb`. This is simpler
-  to understand for users and avoids ignoring the `a` component.
-- Added the `rand` dependency
+- Renamed `EncodedRgb` and `LinearRgb` to `EncodedColor` and `LinearRgb`. This is simpler to understand for users and avoids ignoring the `a` component.
+- Added the `rand` optional dependency
 
 ## [0.1.2] - 2021-04-01
 
