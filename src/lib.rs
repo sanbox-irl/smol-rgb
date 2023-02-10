@@ -18,7 +18,7 @@ use core::fmt;
 /// to perform mixing operations *between* colors in, so we must convert this
 /// color space into a different color, [LinearColor], with [to_linear](Self::to_linear)
 /// before we do such operations.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(C)]
 pub struct EncodedColor {
     /// The red component of the color.
@@ -32,6 +32,12 @@ pub struct EncodedColor {
 
     /// The alpha component of the color, normally the opacity in blending operations.
     pub a: u8,
+}
+
+impl Default for EncodedColor {
+    fn default() -> Self {
+        Self::CLEAR
+    }
 }
 
 impl EncodedColor {
