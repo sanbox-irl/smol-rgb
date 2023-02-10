@@ -1,0 +1,28 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  test:
+    name: Run normal tests
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+      RUST_BACKTRACE: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          components: clippy
+          toolchain: stable
+          override: true
+      - name: clippy
+        run: cargo clippy
+      - name: test normal
+        run: cargo test
+      - name: test no-std
+        run: cargo test --features=libm,serde,bytemuck --no-default-features

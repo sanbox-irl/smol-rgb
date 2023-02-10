@@ -132,7 +132,8 @@ impl EncodedColor {
         u32::from_ne_bytes(bytes)
     }
 
-    /// Converts a packed u32 to an encoded rgba struct. On little endian platforms, this is a no-op.
+    /// Converts a packed u32 to an encoded rgba struct. On little endian platforms, this is a
+    /// no-op.
     ///
     /// Note, your colors must be in order of `blue`, `green`, `red`, `alpha`.
     ///
@@ -181,6 +182,24 @@ impl EncodedColor {
 }
 
 impl EncodedColor {
+    /// Full alpha Red (255, 0, 0, 255)
+    pub const RED: EncodedColor = EncodedColor::new(255, 0, 0, 255);
+
+    /// Zero alpha Red (255, 0, 0, 255)
+    pub const RED_CLEAR: EncodedColor = EncodedColor::new(255, 0, 0, 255);
+
+    /// Full alpha green (255, 0, 0, 255)
+    pub const GREEN: EncodedColor = EncodedColor::new(0, 255, 0, 255);
+
+    /// Zero alpha green (255, 0, 0, 255)
+    pub const GREEN_CLEAR: EncodedColor = EncodedColor::new(0, 255, 0, 255);
+
+    /// Full alpha blue (255, 0, 0, 255)
+    pub const BLUE: EncodedColor = EncodedColor::new(0, 0, 255, 255);
+
+    /// Zero alpha blue (255, 0, 0, 255)
+    pub const BLUE_CLEAR: EncodedColor = EncodedColor::new(0, 0, 255, 255);
+
     /// Full alpha Yellow (255, 255, 0, 255).
     pub const YELLOW: EncodedColor = EncodedColor::new(255, 0, 255, 255);
 
@@ -190,8 +209,14 @@ impl EncodedColor {
     /// God's color (255, 0, 255, 255). The color of choice for graphics testing.
     pub const FUCHSIA: EncodedColor = EncodedColor::new(255, 0, 255, 255);
 
-    /// God's color (255, 0, 255, 255). The color of choice for graphics testing.
+    /// God's color but clear (255, 0, 255, 255). The color of choice for graphics testing.
     pub const FUCHSIA_CLEAR: EncodedColor = EncodedColor::new(255, 0, 255, 0);
+
+    /// Full alpha Teal (0, 255, 255, 255).
+    pub const TEAL: EncodedColor = EncodedColor::new(0, 255, 255, 255);
+
+    /// Zero alpha Teal (0, 255, 255, 0).
+    pub const TEAL_CLEAR: EncodedColor = EncodedColor::new(0, 255, 255, 0);
 }
 
 impl From<(u8, u8, u8, u8)> for EncodedColor {
@@ -208,6 +233,18 @@ impl From<(u8, u8, u8, u8)> for EncodedColor {
 impl From<EncodedColor> for (u8, u8, u8, u8) {
     fn from(o: EncodedColor) -> Self {
         (o.r, o.g, o.b, o.a)
+    }
+}
+
+impl From<EncodedColor> for [u8; 4] {
+    fn from(o: EncodedColor) -> Self {
+        [o.r, o.g, o.b, o.a]
+    }
+}
+
+impl From<[u8; 4]> for EncodedColor {
+    fn from([r, g, b, a]: [u8; 4]) -> Self {
+        Self { r, g, b, a }
     }
 }
 
@@ -260,7 +297,7 @@ impl fmt::UpperHex for EncodedColor {
 /// You *can* directly create this struct, but you probably don't want to. You'd need already
 /// linear sRGB to correctly make this struct -- that's possible to have, but generally, textures,
 /// color pickers (like photoshop), and outputted surface (like if you use a Color Picker on a game)
-/// will all be in the encoded RGB space. Exceptions abound though, so it is possible to directly
+/// will all be in the encoded sRGBA space. Exceptions abound though, so it is possible to directly
 /// create this color.
 #[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
 pub struct LinearColor {
@@ -358,11 +395,7 @@ impl fmt::Debug for LinearColor {
 
 impl fmt::Display for LinearColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "r: {}, g: {}, b: {}, a: {}",
-            self.r, self.g, self.b, self.a
-        )
+        write!(f, "r: {}, g: {}, b: {}, a: {}", self.r, self.g, self.b, self.a)
     }
 }
 
@@ -391,30 +424,28 @@ impl From<EncodedColor> for LinearColor {
 pub const fn encoded_to_linear(c: u8) -> f32 {
     ENCODED_TO_LINEAR_LUT[c as usize]
 
-    /*
-    If you want to see the encoded to linear function written out (ie, how I made this LUT),
-    it looks like this here:
-
-    pub fn encoded_to_linear(input: u8) -> f32 {
-        #[cfg(feature = "libm")]
-        use libm::powf;
-
-        #[cfg(feature = "std")]
-        fn powf(f: f32, e: f32) -> f32 {
-            f.powf(e)
-        }
-
-        let input = input as f32 / 255.0;
-
-        if input >= 0.04045 {
-            powf((input + 0.055) / 1.055, 2.4)
-        } else {
-            input / 12.92
-        }
-    }
-
-    Thank you very much to @thomcc (@zurr on discord) for helping me with this!
-    */
+    // If you want to see the encoded to linear function written out (ie, how I made this LUT),
+    // it looks like this here:
+    //
+    // pub fn encoded_to_linear(input: u8) -> f32 {
+    // #[cfg(feature = "libm")]
+    // use libm::powf;
+    //
+    // #[cfg(feature = "std")]
+    // fn powf(f: f32, e: f32) -> f32 {
+    // f.powf(e)
+    // }
+    //
+    // let input = input as f32 / 255.0;
+    //
+    // if input >= 0.04045 {
+    // powf((input + 0.055) / 1.055, 2.4)
+    // } else {
+    // input / 12.92
+    // }
+    // }
+    //
+    // Thank you very much to @thomcc (@zurr on discord) for helping me with this!
 }
 
 /// This is the LUT that we use. You shouldn't really ever need to use directly, but `encoded_to_linear`
@@ -493,7 +524,7 @@ unsafe impl bytemuck::Pod for LinearColor {}
 unsafe impl bytemuck::Zeroable for LinearColor {}
 
 #[cfg(feature = "serde")]
-const ENCODED_NAME: &str = "Encoded Rgb";
+const ENCODED_NAME: &str = "EncodedColor";
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for EncodedColor {
@@ -712,27 +743,30 @@ mod tests {
         let round_trip_color: EncodedColor = bincode::deserialize(&buff).unwrap();
         assert_eq!(color, round_trip_color);
 
-        let buf = [14u8, 12, 3];
-        let o = bincode::deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-        assert!(o.is_err());
-
         // okay and now with options, because otherwise it's hard to get errors
         // out of bincode...
-        use bincode::Options;
-        let deserialize = bincode::DefaultOptions::new();
+        #[cfg(feature = "bytemuck")]
+        {
+            let buf = [14u8, 12, 3];
+            let o = bincode::deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            assert!(o.is_err());
 
-        let buf = [14, 12];
-        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-        assert!(o.is_err());
+            use bincode::Options;
+            let deserialize = bincode::DefaultOptions::new();
 
-        let buf = [14u64];
-        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-        assert!(o.is_err());
+            let buf = [14, 12];
+            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            assert!(o.is_err());
 
-        let buf = [31.0f32];
-        let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-        // lol, i don't like this. is there a way to make this not work? if you see this
-        // and know the answer, please PR me!
-        assert!(o.is_ok());
+            let buf = [14u64];
+            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            assert!(o.is_err());
+
+            let buf = [31.0f32];
+            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            // lol, i don't like this. is there a way to make this not work? if you see this
+            // and know the answer, please PR me!
+            assert!(o.is_ok());
+        }
     }
 }

@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.3.0] - 2021-04-01
+
+- BREAKING: changed the serialized name of `Encoded Rgb` to `EncodedColor`. This will break serialization in formats like `JSON` or `YAML`.
+- Added more color names like `YELLOW`, `RED`, and `TEAL`
+
 ## [0.2.0] - 2021-04-01
 
 - Renamed `EncodedRgb` and `LinearRgb` to `EncodedColor` and `LinearRgb`. This is simpler to understand for users and avoids ignoring the `a` component.
