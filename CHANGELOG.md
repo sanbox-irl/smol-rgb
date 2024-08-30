@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.3.1] - 2024-08-30
+
+- Fixed `YELLOW` and `YELLOW_CLEAR` to actually be Yellow instead of fuchsia colored.
+- Added builders to `EncodedColor`.
+
 ## [0.3.0] - 2021-04-01
 
 - BREAKING: changed the serialized name of `Encoded Rgb` to `EncodedColor`. This will break serialization in formats like `JSON` or `YAML`.
