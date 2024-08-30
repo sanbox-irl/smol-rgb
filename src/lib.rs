@@ -55,6 +55,30 @@ impl EncodedColor {
         Self { r, g, b, a }
     }
 
+    /// Creates a new color, overriding red with provided value.
+    #[must_use = "method returns a new color and does not mutate the original value"]
+    pub const fn with_r(self, r: u8) -> Self {
+        Self { r, ..self }
+    }
+
+    /// Creates a new color, overriding green with provided value.
+    #[must_use = "method returns a new color and does not mutate the original value"]
+    pub const fn with_g(self, g: u8) -> Self {
+        Self { g, ..self }
+    }
+
+    /// Creates a new color, overriding blue with provided value.
+    #[must_use = "method returns a new color and does not mutate the original value"]
+    pub const fn with_b(self, b: u8) -> Self {
+        Self { b, ..self }
+    }
+
+    /// Creates a new color, overriding alpha with provided value.
+    #[must_use = "method returns a new color and does not mutate the original value"]
+    pub const fn with_a(self, a: u8) -> Self {
+        Self { a, ..self }
+    }
+
     /// Transforms this color into the Linear color space.
     #[inline]
     pub fn to_linear(self) -> LinearColor {
@@ -207,10 +231,10 @@ impl EncodedColor {
     pub const BLUE_CLEAR: EncodedColor = EncodedColor::new(0, 0, 255, 255);
 
     /// Full alpha Yellow (255, 255, 0, 255).
-    pub const YELLOW: EncodedColor = EncodedColor::new(255, 0, 255, 255);
+    pub const YELLOW: EncodedColor = EncodedColor::new(255, 255, 0, 255);
 
     /// Zero alpha Yellow (255, 255, 0, 0).
-    pub const YELLOW_CLEAR: EncodedColor = EncodedColor::new(255, 0, 255, 0);
+    pub const YELLOW_CLEAR: EncodedColor = EncodedColor::new(255, 255, 0, 0);
 
     /// God's color (255, 0, 255, 255). The color of choice for graphics testing.
     pub const FUCHSIA: EncodedColor = EncodedColor::new(255, 0, 255, 255);
@@ -623,6 +647,15 @@ mod tests {
 
     static_assertions::assert_eq_align!(EncodedColor, u8);
     static_assertions::assert_eq_size!(EncodedColor, [u8; 4]);
+
+    #[test]
+    fn builders() {
+        let c = EncodedColor::WHITE;
+        assert_eq!(c.with_r(128), EncodedColor::new(128, 255, 255, 255));
+        assert_eq!(c.with_g(128), EncodedColor::new(255, 128, 255, 255));
+        assert_eq!(c.with_b(128), EncodedColor::new(255, 255, 128, 255));
+        assert_eq!(c.with_a(128), EncodedColor::new(255, 255, 255, 128));
+    }
 
     #[test]
     fn from_u32s() {
