@@ -1,5 +1,12 @@
 # Change Log
 
+
+## [0.4.0] - 2025-05-26
+
+- Renamed `Linear::to_encoded_space` to just `Linear::encoded_space`.
+- Simplified the `From` and `Into` conversations for tuples and arrays
+  to use transmutation operations.
+
 ## [0.3.1] - 2024-08-30
 
 - Fixed `YELLOW` and `YELLOW_CLEAR` to actually be Yellow instead of fuchsia colored.

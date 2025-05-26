@@ -107,6 +107,15 @@ impl EncodedColor {
         ]
     }
 
+    /// Creates an array representation of the color. This is useful for sending the color
+    /// to a uniform, but is the same memory representation as `Self`.
+    #[inline]
+    pub fn to_array(self) -> [u8; 4] {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(self) }
+    }
+
     /// Converts this color to an [f32; 4] array. This is **still in encoded
     /// space** but they are converted to an f32. This is mostly for compatability
     /// with other libraries which sometimes need to f32s even while in encoded sRGB.
@@ -251,30 +260,33 @@ impl EncodedColor {
 
 impl From<(u8, u8, u8, u8)> for EncodedColor {
     fn from(o: (u8, u8, u8, u8)) -> Self {
-        Self {
-            r: o.0,
-            g: o.1,
-            b: o.2,
-            a: o.3,
-        }
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<EncodedColor> for (u8, u8, u8, u8) {
     fn from(o: EncodedColor) -> Self {
-        (o.r, o.g, o.b, o.a)
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<EncodedColor> for [u8; 4] {
     fn from(o: EncodedColor) -> Self {
-        [o.r, o.g, o.b, o.a]
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<[u8; 4]> for EncodedColor {
-    fn from([r, g, b, a]: [u8; 4]) -> Self {
-        Self { r, g, b, a }
+    fn from(o: [u8; 4]) -> Self {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
@@ -356,7 +368,7 @@ impl LinearColor {
     /// Transforms this color into the Encoded color space. Use this space to serialize
     /// colors.
     #[inline]
-    pub fn to_encoded_space(self) -> EncodedColor {
+    pub fn to_encoded(self) -> EncodedColor {
         EncodedColor {
             r: linear_to_encoded(self.r),
             g: linear_to_encoded(self.g),
@@ -390,25 +402,33 @@ impl LinearColor {
 
 impl From<LinearColor> for [f32; 4] {
     fn from(o: LinearColor) -> Self {
-        [o.r, o.g, o.b, o.a]
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<[f32; 4]> for LinearColor {
     fn from(o: [f32; 4]) -> Self {
-        Self::new(o[0], o[1], o[2], o[3])
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<LinearColor> for (f32, f32, f32, f32) {
     fn from(o: LinearColor) -> Self {
-        (o.r, o.g, o.b, o.a)
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
 impl From<(f32, f32, f32, f32)> for LinearColor {
     fn from(o: (f32, f32, f32, f32)) -> Self {
-        Self::new(o.0, o.1, o.2, o.3)
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { std::mem::transmute(o) }
     }
 }
 
@@ -431,7 +451,7 @@ impl fmt::Display for LinearColor {
 
 impl From<LinearColor> for EncodedColor {
     fn from(o: LinearColor) -> Self {
-        o.to_encoded_space()
+        o.to_encoded()
     }
 }
 
@@ -480,7 +500,7 @@ pub const fn encoded_to_linear(c: u8) -> f32 {
 
 /// This is the LUT that we use. You shouldn't really ever need to use directly, but `encoded_to_linear`
 /// is just a wrapper to index into this LUT.
-/// 
+///
 /// I have chosen to inline write this, rather than use a build script, because it's a bit simpler.
 #[rustfmt::skip]
 pub const ENCODED_TO_LINEAR_LUT: [f32; 256] = [
@@ -621,10 +641,10 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
 impl rand::distributions::Distribution<EncodedColor> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EncodedColor {
         EncodedColor {
-            r: rng.gen(),
-            g: rng.gen(),
-            b: rng.gen(),
-            a: rng.gen(),
+            r: rng.random(),
+            g: rng.random(),
+            b: rng.random(),
+            a: rng.random(),
         }
     }
 }
@@ -633,10 +653,10 @@ impl rand::distributions::Distribution<EncodedColor> for rand::distributions::St
 impl rand::distributions::Distribution<LinearColor> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> LinearColor {
         LinearColor {
-            r: rng.gen(),
-            g: rng.gen(),
-            b: rng.gen(),
-            a: rng.gen(),
+            r: rng.random(),
+            g: rng.random(),
+            b: rng.random(),
+            a: rng.random(),
         }
     }
 }
@@ -646,7 +666,20 @@ mod tests {
     use super::*;
 
     static_assertions::assert_eq_align!(EncodedColor, u8);
+
     static_assertions::assert_eq_size!(EncodedColor, [u8; 4]);
+    static_assertions::assert_eq_align!(EncodedColor, [u8; 4]);
+
+    static_assertions::assert_eq_size!(EncodedColor, (u8, u8, u8, u8));
+    static_assertions::assert_eq_align!(EncodedColor, (u8, u8, u8, u8));
+
+    static_assertions::assert_eq_align!(LinearColor, f32);
+
+    static_assertions::assert_eq_size!(LinearColor, [f32; 4]);
+    static_assertions::assert_eq_align!(LinearColor, [f32; 4]);
+
+    static_assertions::assert_eq_size!(LinearColor, (f32, f32, f32, f32));
+    static_assertions::assert_eq_align!(LinearColor, (f32, f32, f32, f32));
 
     #[test]
     fn builders() {
@@ -711,6 +744,48 @@ mod tests {
         decode(0.1274377, 100);
         decode(0.8713672, 240);
         decode(0.2158605, 128);
+    }
+
+    #[test]
+    fn transmute_encoded() {
+        let a = EncodedColor::new(40, 120, 240, 255);
+        let a_tuple: (u8, u8, u8, u8) = a.into();
+        assert_eq!(a_tuple.0, a.r);
+        assert_eq!(a_tuple.1, a.g);
+        assert_eq!(a_tuple.2, a.b);
+        assert_eq!(a_tuple.3, a.a);
+        let a_from_tuple = EncodedColor::from(a_tuple);
+        assert_eq!(a_from_tuple, a);
+
+        let a_array: [u8; 4] = a.into();
+        assert_eq!(a_array[0], a.r);
+        assert_eq!(a_array[1], a.g);
+        assert_eq!(a_array[2], a.b);
+        assert_eq!(a_array[3], a.a);
+
+        let a_from_array = EncodedColor::from(a_array);
+        assert_eq!(a_from_array, a);
+    }
+
+    #[test]
+    fn transmute_linear() {
+        let a = EncodedColor::new(40, 120, 240, 255).to_linear();
+        let a_tuple: (f32, f32, f32, f32) = a.into();
+        assert_eq!(a_tuple.0, a.r);
+        assert_eq!(a_tuple.1, a.g);
+        assert_eq!(a_tuple.2, a.b);
+        assert_eq!(a_tuple.3, a.a);
+        let a_from_tuple = LinearColor::from(a_tuple);
+        assert_eq!(a_from_tuple, a);
+
+        let a_array: [f32; 4] = a.into();
+        assert_eq!(a_array[0], a.r);
+        assert_eq!(a_array[1], a.g);
+        assert_eq!(a_array[2], a.b);
+        assert_eq!(a_array[3], a.a);
+
+        let a_from_array = LinearColor::from(a_array);
+        assert_eq!(a_from_array, a);
     }
 
     #[test]
