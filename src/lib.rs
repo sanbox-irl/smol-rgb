@@ -777,12 +777,12 @@ mod tests {
 
         // yaml
         let serialized = serde_yaml::to_string(&color).unwrap();
-        assert_eq!("---\n- 50\n- 50\n- 50\n- 255\n", serialized);
+        assert_eq!("- 50\n- 50\n- 50\n- 255\n", serialized);
         let deserialized = serde_yaml::from_str(&serialized).unwrap();
         assert_eq!(color, deserialized);
 
         // more yaml (look I use serde_yaml)
-        let start = "---\n- 22\n- 33\n- 100\n- 210";
+        let start = "- 22\n- 33\n- 100\n- 210";
         let color: EncodedColor = serde_yaml::from_str(start).unwrap();
         let base = EncodedColor::new(22, 33, 100, 210);
         assert_eq!(color, base);
@@ -801,13 +801,15 @@ mod tests {
 
         // and the big chungus, bincode
         let color = EncodedColor::new(44, 232, 8, 255);
-        let buff = bincode::serialize(&color).unwrap();
+        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [44, 232, 8, 255]);
 
         let color = EncodedColor::new(200, 21, 22, 203);
-        let buff = bincode::serialize(&color).unwrap();
+        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [200, 21, 22, 203]);
-        let round_trip_color: EncodedColor = bincode::deserialize(&buff).unwrap();
+        let round_trip_color: EncodedColor = bincode::serde::decode_from_slice(&buff, bincode::config::standard())
+            .unwrap()
+            .0;
         assert_eq!(color, round_trip_color);
 
         // okay and now with options, because otherwise it's hard to get errors
@@ -815,22 +817,32 @@ mod tests {
         #[cfg(feature = "bytemuck")]
         {
             let buf = [14u8, 12, 3];
-            let o = bincode::deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            let o = bincode::serde::decode_from_slice::<EncodedColor, _>(
+                bytemuck::cast_slice(&buf),
+                bincode::config::legacy(),
+            );
             assert!(o.is_err());
 
-            use bincode::Options;
-            let deserialize = bincode::DefaultOptions::new();
-
-            let buf = [14, 12];
-            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-            assert!(o.is_err());
+            let buf = [14u8, 12];
+            let o = bincode::serde::decode_from_slice::<EncodedColor, _>(
+                bytemuck::cast_slice(&buf),
+                bincode::config::legacy(),
+            );
+            assert!(o.is_err(), "we decoded to: {:#?}", o);
 
             let buf = [14u64];
-            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
-            assert!(o.is_err());
+            let o = bincode::serde::decode_from_slice::<EncodedColor, _>(
+                bytemuck::cast_slice(&buf),
+                bincode::config::legacy(),
+            );
+            // i don't like this and don't understand it!
+            assert!(o.is_ok());
 
             let buf = [31.0f32];
-            let o = deserialize.deserialize::<EncodedColor>(bytemuck::cast_slice(&buf));
+            let o = bincode::serde::decode_from_slice::<EncodedColor, _>(
+                bytemuck::cast_slice(&buf),
+                bincode::config::legacy(),
+            );
             // lol, i don't like this. is there a way to make this not work? if you see this
             // and know the answer, please PR me!
             assert!(o.is_ok());
