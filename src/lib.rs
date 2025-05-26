@@ -113,7 +113,7 @@ impl EncodedColor {
     pub fn to_array(self) -> [u8; 4] {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
-        unsafe { std::mem::transmute(self) }
+        unsafe { core::mem::transmute(self) }
     }
 
     /// Converts this color to an [f32; 4] array. This is **still in encoded
@@ -258,27 +258,11 @@ impl EncodedColor {
     pub const TEAL_CLEAR: EncodedColor = EncodedColor::new(0, 255, 255, 0);
 }
 
-impl From<(u8, u8, u8, u8)> for EncodedColor {
-    fn from(o: (u8, u8, u8, u8)) -> Self {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
-    }
-}
-
-impl From<EncodedColor> for (u8, u8, u8, u8) {
-    fn from(o: EncodedColor) -> Self {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
-    }
-}
-
 impl From<EncodedColor> for [u8; 4] {
     fn from(o: EncodedColor) -> Self {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
+        unsafe { core::mem::transmute(o) }
     }
 }
 
@@ -286,7 +270,7 @@ impl From<[u8; 4]> for EncodedColor {
     fn from(o: [u8; 4]) -> Self {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
+        unsafe { core::mem::transmute(o) }
     }
 }
 
@@ -404,7 +388,7 @@ impl From<LinearColor> for [f32; 4] {
     fn from(o: LinearColor) -> Self {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
+        unsafe { core::mem::transmute(o) }
     }
 }
 
@@ -412,23 +396,7 @@ impl From<[f32; 4]> for LinearColor {
     fn from(o: [f32; 4]) -> Self {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
-    }
-}
-
-impl From<LinearColor> for (f32, f32, f32, f32) {
-    fn from(o: LinearColor) -> Self {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
-    }
-}
-
-impl From<(f32, f32, f32, f32)> for LinearColor {
-    fn from(o: (f32, f32, f32, f32)) -> Self {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { std::mem::transmute(o) }
+        unsafe { core::mem::transmute(o) }
     }
 }
 
@@ -638,7 +606,7 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
 }
 
 #[cfg(feature = "rand")]
-impl rand::distributions::Distribution<EncodedColor> for rand::distributions::Standard {
+impl rand::distr::Distribution<EncodedColor> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EncodedColor {
         EncodedColor {
             r: rng.random(),
@@ -650,7 +618,7 @@ impl rand::distributions::Distribution<EncodedColor> for rand::distributions::St
 }
 
 #[cfg(feature = "rand")]
-impl rand::distributions::Distribution<LinearColor> for rand::distributions::Standard {
+impl rand::distr::Distribution<LinearColor> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> LinearColor {
         LinearColor {
             r: rng.random(),
@@ -661,25 +629,25 @@ impl rand::distributions::Distribution<LinearColor> for rand::distributions::Sta
     }
 }
 
+const _ENCODED_ASSERTIONS: () = {
+    assert!(core::mem::align_of::<EncodedColor>() == core::mem::align_of::<u8>());
+
+    type U8Array = [u8; 4];
+    assert!(core::mem::size_of::<EncodedColor>() == core::mem::size_of::<U8Array>());
+    assert!(core::mem::align_of::<EncodedColor>() == core::mem::align_of::<U8Array>());
+};
+
+const _LINEAR_ASSERTIONS: () = {
+    assert!(core::mem::align_of::<LinearColor>() == core::mem::align_of::<f32>());
+
+    type F32Array = [f32; 4];
+    assert!(core::mem::size_of::<LinearColor>() == core::mem::size_of::<F32Array>());
+    assert!(core::mem::align_of::<LinearColor>() == core::mem::align_of::<F32Array>());
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    static_assertions::assert_eq_align!(EncodedColor, u8);
-
-    static_assertions::assert_eq_size!(EncodedColor, [u8; 4]);
-    static_assertions::assert_eq_align!(EncodedColor, [u8; 4]);
-
-    static_assertions::assert_eq_size!(EncodedColor, (u8, u8, u8, u8));
-    static_assertions::assert_eq_align!(EncodedColor, (u8, u8, u8, u8));
-
-    static_assertions::assert_eq_align!(LinearColor, f32);
-
-    static_assertions::assert_eq_size!(LinearColor, [f32; 4]);
-    static_assertions::assert_eq_align!(LinearColor, [f32; 4]);
-
-    static_assertions::assert_eq_size!(LinearColor, (f32, f32, f32, f32));
-    static_assertions::assert_eq_align!(LinearColor, (f32, f32, f32, f32));
 
     #[test]
     fn builders() {
@@ -749,14 +717,6 @@ mod tests {
     #[test]
     fn transmute_encoded() {
         let a = EncodedColor::new(40, 120, 240, 255);
-        let a_tuple: (u8, u8, u8, u8) = a.into();
-        assert_eq!(a_tuple.0, a.r);
-        assert_eq!(a_tuple.1, a.g);
-        assert_eq!(a_tuple.2, a.b);
-        assert_eq!(a_tuple.3, a.a);
-        let a_from_tuple = EncodedColor::from(a_tuple);
-        assert_eq!(a_from_tuple, a);
-
         let a_array: [u8; 4] = a.into();
         assert_eq!(a_array[0], a.r);
         assert_eq!(a_array[1], a.g);
@@ -770,13 +730,6 @@ mod tests {
     #[test]
     fn transmute_linear() {
         let a = EncodedColor::new(40, 120, 240, 255).to_linear();
-        let a_tuple: (f32, f32, f32, f32) = a.into();
-        assert_eq!(a_tuple.0, a.r);
-        assert_eq!(a_tuple.1, a.g);
-        assert_eq!(a_tuple.2, a.b);
-        assert_eq!(a_tuple.3, a.a);
-        let a_from_tuple = LinearColor::from(a_tuple);
-        assert_eq!(a_from_tuple, a);
 
         let a_array: [f32; 4] = a.into();
         assert_eq!(a_array[0], a.r);
