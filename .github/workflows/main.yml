@@ -25,4 +25,4 @@ jobs:
       - name: test normal
         run: cargo test
       - name: test no-std
-        run: cargo test --features=libm,serde,bytemuck --no-default-features
+        run: cargo test --features=libm,serde,bytemuck,colors --no-default-features
