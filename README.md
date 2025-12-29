@@ -16,7 +16,7 @@ smol-rgb = "0.5.0"
 no-std is supported, but requires `libm` to work, like so:
 
 ```toml
-smol-rgb = { version = "0.4.0", default-features = false, features = ["libm"]  }
+smol-rgb = { version = "0.5.0", default-features = false, features = ["libm", "colors"]  }
 ```
 
 We also support four other features: `serde`, `bytemuck`, `rand`, and `colors`.
