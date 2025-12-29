@@ -1,10 +1,12 @@
 # Change Log
 
-### Unreleased
+### [0.5.0] - 2025-12-28
 
 - BREAKING: Moved all named colors under a feature called "colors", which is
   enabled by default. If you have `default-features=false` and want the color names,
   just add the feature `colors`.
+- Added a const function `EncodedColor::from_hex_code` and `EncodedColor::try_from_hex_code`
+  to the library for parsing hex codes.
 
 ## [0.4.0] - 2025-05-26
 
