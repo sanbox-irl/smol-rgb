@@ -41,15 +41,6 @@ impl Default for EncodedColor {
 }
 
 impl EncodedColor {
-    /// A basic white (255, 255, 255, 255) with full opacity.
-    pub const WHITE: EncodedColor = EncodedColor::new(255, 255, 255, 255);
-
-    /// A basic black (0, 0, 0, 255) with full opacity.
-    pub const BLACK: EncodedColor = EncodedColor::new(0, 0, 0, 255);
-
-    /// A black (0, 0, 0, 0) with zero opacity.
-    pub const CLEAR: EncodedColor = EncodedColor::new(0, 0, 0, 0);
-
     /// Creates a new encoded 32bit color.
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
@@ -79,9 +70,158 @@ impl EncodedColor {
         Self { a, ..self }
     }
 
+    /// Tries to convert a hex code, as a string, into an [`EncodedColor`].
+    ///
+    /// Colors may be in one of four forms:
+    /// - `RRGGBBAA` or `RRGGBB`.
+    /// - `#RRGGBBAA` or `#RRGGBB`.
+    ///
+    /// When the alpha is not provided in a 6-character (ignoring the possible `#` character),
+    /// then it will be `0`.
+    ///
+    /// ```
+    /// use smol_rgb::EncodedColor;
+    ///
+    /// assert_eq!(EncodedColor::try_from_hex_code("FEEEED").unwrap(), EncodedColor::new(254, 238, 237, 0));
+    /// assert_eq!(EncodedColor::try_from_hex_code("01090402").unwrap(), EncodedColor::new(1, 9, 4, 2));
+    /// assert_eq!(EncodedColor::try_from_hex_code("A1B9C4D2").unwrap(), EncodedColor::new(161, 185, 196, 210));
+    ///
+    /// // adding a `#` doesn't matter
+    /// assert_eq!(EncodedColor::try_from_hex_code("#FEEEED").unwrap(), EncodedColor::try_from_hex_code("FEEEED").unwrap());
+    /// assert_eq!(EncodedColor::try_from_hex_code("#FEEEEDAA").unwrap(), EncodedColor::new(254, 238, 237, 170));
+    ///
+    /// // you must submit either a 6 code or 8 code string. It may or may not have a leading `#`.
+    /// assert!(EncodedColor::try_from_hex_code("#2B0E1D").is_ok());
+    /// assert!(EncodedColor::try_from_hex_code("#2B0E1DD").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("#2B0E1DB").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("#2B0E1DBB").is_ok());
+    /// assert!(EncodedColor::try_from_hex_code("2B0E1DBB").is_ok());
+    /// assert!(EncodedColor::try_from_hex_code("2B0E1DB").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("").is_err());
+    /// ```
+    ///
+    /// The characters used must be valid hex digits, which is to say:
+    /// - `A..=F` or `a..=f`
+    /// - `0..=9`
+    ///
+    /// ```
+    /// use smol_rgb::EncodedColor;
+    ///
+    /// assert!(EncodedColor::try_from_hex_code("2B0E1DBB").is_ok());
+    /// assert!(EncodedColor::try_from_hex_code("2b0e1dbb").is_ok());
+    /// // caps and non-caps is chaotic, but allowable
+    /// assert!(EncodedColor::try_from_hex_code("2B0e1DbB").is_ok());
+    /// assert!(EncodedColor::try_from_hex_code("2B010203G").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("2B010203GG").is_err());
+    ///
+    /// // no hashtags except one at the start
+    /// assert!(EncodedColor::try_from_hex_code("2B010203#").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("2B010203##").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("##2B0102").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("##2B010203").is_err());
+    /// assert!(EncodedColor::try_from_hex_code("🦀🦀").is_err());
+    /// ```
+    pub const fn try_from_hex_code(input: &str) -> Result<Self, HexCodeParseErr> {
+        const fn parse_hex_tuple(big: u8, small: u8) -> Result<u8, BadHexCode> {
+            const fn parse_hex(input: u8) -> Result<u8, BadHexCode> {
+                let output = match input {
+                    b'0' => 0,
+                    b'1' => 1,
+                    b'2' => 2,
+                    b'3' => 3,
+                    b'4' => 4,
+                    b'5' => 5,
+                    b'6' => 6,
+                    b'7' => 7,
+                    b'8' => 8,
+                    b'9' => 9,
+                    b'A' | b'a' => 10,
+                    b'B' | b'b' => 11,
+                    b'C' | b'c' => 12,
+                    b'D' | b'd' => 13,
+                    b'E' | b'e' => 14,
+                    b'F' | b'f' => 15,
+                    _ => {
+                        return Err(BadHexCode);
+                    }
+                };
+
+                Ok(output)
+            }
+
+            match (parse_hex(big), parse_hex(small)) {
+                (Ok(big), Ok(small)) => Ok(16 * big + small),
+                (Err(e), _) | (_, Err(e)) => Err(e),
+            }
+        }
+        let mut bytes_array = input.as_bytes();
+
+        if bytes_array.is_empty() {
+            return Err(HexCodeParseErr::UnexpectedLength);
+        }
+
+        // ignore the `#`
+        if bytes_array[0] == b'#' {
+            // todo: we can simplify this to `bytes_array[1..]` when indexing
+            // is stable in const rust
+            bytes_array = bytes_array.split_at(1).1;
+        }
+
+        if !matches!(bytes_array.len(), 6 | 8) {
+            return Err(HexCodeParseErr::UnexpectedLength);
+        }
+
+        let maybe_r = parse_hex_tuple(bytes_array[0], bytes_array[1]);
+        let maybe_g = parse_hex_tuple(bytes_array[2], bytes_array[3]);
+        let maybe_b = parse_hex_tuple(bytes_array[4], bytes_array[5]);
+        let maybe_a = if bytes_array.len() == 8 {
+            parse_hex_tuple(bytes_array[6], bytes_array[7])
+        } else {
+            Ok(0)
+        };
+
+        match (maybe_r, maybe_g, maybe_b, maybe_a) {
+            (Ok(r), Ok(g), Ok(b), Ok(a)) => Ok(Self { r, g, b, a }),
+            _ => Err(HexCodeParseErr::BadHexCode(BadHexCode)),
+        }
+    }
+
+    /// Convert a hex code, as a string, into an [`EncodedColor`] or panics.
+    ///
+    /// Colors may be in one of four forms:
+    /// - `RRGGBBAA` or `RRGGBB`.
+    /// - `#RRGGBBAA` or `#RRGGBB`.
+    ///
+    /// When the alpha is not provided in a 6-character (ignoring the possible `#` character),
+    /// then it will be `0`.
+    ///
+    /// The characters used must be valid hex digits, which is to say:
+    /// - `A..=F` or `a..=f`
+    /// - `0..=9`
+    ///
+    /// ```
+    /// use smol_rgb::EncodedColor;
+    ///
+    /// assert_eq!(EncodedColor::from_hex_code("FEEEED"), EncodedColor::new(254, 238, 237, 0));
+    /// assert_eq!(EncodedColor::from_hex_code("01090402"), EncodedColor::new(1, 9, 4, 2));
+    /// assert_eq!(EncodedColor::from_hex_code("A1B9C4D2"), EncodedColor::new(161, 185, 196, 210));
+    ///
+    /// // adding a `#` doesn't matter
+    /// assert_eq!(EncodedColor::from_hex_code("#FEEEED"), EncodedColor::from_hex_code("FEEEED"));
+    /// assert_eq!(EncodedColor::from_hex_code("#FEEEEDAA"), EncodedColor::new(254, 238, 237, 170));
+    /// ```
+    ///
+    /// See [`EncodedColor::try_from_hex_code`] for a non-panicking variant.
+    pub const fn from_hex_code(input: &str) -> Self {
+        match Self::try_from_hex_code(input) {
+            Ok(v) => v,
+            Err(_e) => panic!("invalid color hex code"),
+        }
+    }
+
     /// Transforms this color into the Linear color space.
     #[inline]
-    pub fn to_linear(self) -> LinearColor {
+    pub const fn to_linear(self) -> LinearColor {
         LinearColor {
             r: encoded_to_linear(self.r),
             g: encoded_to_linear(self.g),
@@ -98,7 +238,7 @@ impl EncodedColor {
     /// this is an unusual use of f32s, and in general, this module acts as if
     /// f32 == Linear and u8 == Encoded, though this is not technically true.
     #[inline]
-    pub fn to_encoded_f32s(self) -> [f32; 4] {
+    pub const fn to_encoded_f32s(self) -> [f32; 4] {
         [
             self.r as f32 / 255.0,
             self.g as f32 / 255.0,
@@ -110,7 +250,7 @@ impl EncodedColor {
     /// Creates an array representation of the color. This is useful for sending the color
     /// to a uniform, but is the same memory representation as `Self`.
     #[inline]
-    pub fn to_array(self) -> [u8; 4] {
+    pub const fn to_array(self) -> [u8; 4] {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
         unsafe { core::mem::transmute(self) }
@@ -124,7 +264,7 @@ impl EncodedColor {
     /// this is an unusual use of f32s, and in general, this module acts as if
     /// f32 == Linear and u8 == Encoded, though this is not technically true.
     #[inline]
-    pub fn from_encoded_f32s(input: [f32; 4]) -> Self {
+    pub const fn from_encoded_f32s(input: [f32; 4]) -> Self {
         Self::new(
             (input[0] * 255.0) as u8,
             (input[1] * 255.0) as u8,
@@ -220,7 +360,17 @@ impl EncodedColor {
     }
 }
 
+#[cfg(feature = "colors")]
 impl EncodedColor {
+    /// A basic white (255, 255, 255, 255) with full opacity.
+    pub const WHITE: EncodedColor = EncodedColor::new(255, 255, 255, 255);
+
+    /// A basic black (0, 0, 0, 255) with full opacity.
+    pub const BLACK: EncodedColor = EncodedColor::new(0, 0, 0, 255);
+
+    /// A black (0, 0, 0, 0) with zero opacity.
+    pub const CLEAR: EncodedColor = EncodedColor::new(0, 0, 0, 0);
+
     /// Full alpha Red (255, 0, 0, 255)
     pub const RED: EncodedColor = EncodedColor::new(255, 0, 0, 255);
 
@@ -295,7 +445,6 @@ impl fmt::Display for EncodedColor {
     }
 }
 
-// we use rgba encoding, for simplicity...
 impl fmt::LowerHex for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.to_rgba_u32();
@@ -304,12 +453,19 @@ impl fmt::LowerHex for EncodedColor {
     }
 }
 
-// we use rgba encoding, for simplicity...
 impl fmt::UpperHex for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.to_rgba_u32();
 
         fmt::UpperHex::fmt(&val, f)
+    }
+}
+
+impl core::str::FromStr for EncodedColor {
+    type Err = HexCodeParseErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from_hex_code(s)
     }
 }
 
@@ -351,6 +507,7 @@ impl LinearColor {
 
     /// Transforms this color into the Encoded color space. Use this space to serialize
     /// colors.
+    // `const` required `linear_to_encoded` to be const
     #[inline]
     pub fn to_encoded(self) -> EncodedColor {
         EncodedColor {
@@ -365,30 +522,30 @@ impl LinearColor {
     /// to a uniform, but is the same memory representation as `Self`. [LinearColor] also implements
     /// Into, but this function is often more convenient.
     #[inline]
-    pub fn to_array(self) -> [f32; 4] {
-        self.into()
+    pub const fn to_array(self) -> [f32; 4] {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { core::mem::transmute(self) }
     }
 
     /// Encodes the 4 floats as 16 u8s. This is useful for sending the color
     /// to a uniform, but is the same memory representation as `Self` -- ie,
     /// the bits have just been reinterpreted as 16 u8s, but they're still secret floats.
     #[inline]
-    pub fn to_bits(self) -> [u8; 16] {
+    pub const fn to_bits(self) -> [u8; 16] {
         unsafe { core::mem::transmute(self.to_array()) }
     }
 
     /// Recasts four u8s into floats. Note: these floats could be subnormal if these u8s
     /// were produced incorrectly.
-    pub fn from_bits(value: [u8; 16]) -> Self {
+    pub const fn from_bits(value: [u8; 16]) -> Self {
         unsafe { core::mem::transmute(value) }
     }
 }
 
 impl From<LinearColor> for [f32; 4] {
     fn from(o: LinearColor) -> Self {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { core::mem::transmute(o) }
+        o.to_array()
     }
 }
 
@@ -510,6 +667,7 @@ pub const ENCODED_TO_LINEAR_LUT: [f32; 256] = [
 ///
 /// This is based on <https://bottosson.github.io/posts/colorwrong/> and similar
 /// transfer functions.
+// const requires powf to be const, which it is not
 pub fn linear_to_encoded(input: f32) -> u8 {
     #[cfg(feature = "libm")]
     use libm::powf;
@@ -530,6 +688,25 @@ pub fn linear_to_encoded(input: f32) -> u8 {
     // in tests.
     (encoded_f32 * 256.0) as u8
 }
+
+/// An error generated from parsing a hex code.
+#[derive(Debug, thiserror::Error)]
+pub enum HexCodeParseErr {
+    /// Invalid hexcode decimal given. The only valid binary codes
+    /// are `a..=f`, `A..=F`, and `0..=9`.
+    #[error(transparent)]
+    BadHexCode(#[from] BadHexCode),
+
+    /// str must be 8 or 6 bytes long, ignoring a leading `#`"
+    #[error("str must be 8 or 6 bytes long, ignoring a leading `#`")]
+    UnexpectedLength,
+}
+
+/// Invalid hexcode decimal given. The only valid binary codes
+/// are `a..=f`, `A..=F`, and `0..=9`.
+#[derive(Debug, thiserror::Error)]
+#[error("invalid hexcode given")]
+pub struct BadHexCode;
 
 #[cfg(feature = "bytemuck")]
 unsafe impl bytemuck::Pod for EncodedColor {}
