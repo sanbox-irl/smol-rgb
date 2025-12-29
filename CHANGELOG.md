@@ -1,5 +1,10 @@
 # Change Log
 
+### Unreleased
+
+- BREAKING: Moved all named colors under a feature called "colors", which is
+  enabled by default. If you have `default-features=false` and want the color names,
+  just add the feature `colors`.
 
 ## [0.4.0] - 2025-05-26
 
