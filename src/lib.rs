@@ -978,11 +978,11 @@ mod tests {
 
         // and the big chungus, bincode
         let color = EncodedColor::new(44, 232, 8, 255);
-        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
+        let buff = bincode::serde::encode_to_vec(color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [44, 232, 8, 255]);
 
         let color = EncodedColor::new(200, 21, 22, 203);
-        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
+        let buff = bincode::serde::encode_to_vec(color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [200, 21, 22, 203]);
         let round_trip_color: EncodedColor = bincode::serde::decode_from_slice(&buff, bincode::config::standard())
             .unwrap()
