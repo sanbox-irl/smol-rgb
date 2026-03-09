@@ -825,6 +825,7 @@ const _LINEAR_ASSERTIONS: () = {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn builders() {
@@ -1023,6 +1024,33 @@ mod tests {
             // lol, i don't like this. is there a way to make this not work? if you see this
             // and know the answer, please PR me!
             assert!(o.is_ok());
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn parse_string_no_crash(s in "\\PC*") {
+            let _: Result<EncodedColor, _> = s.parse();
+        }
+
+        #[test]
+        fn parses_date_back_to_original(r in 0u8..=255,
+                                        g in 0u8..=255,
+                                        b in 0u8..=255,
+                                        a in 0u8..=255
+        ) {
+            use std::string::ToString;
+
+            let encoded_color: EncodedColor = std::format!("{:02x}{:02x}{:02x}{:02x}", r, g, b, a).parse().unwrap();
+            prop_assert_eq!(encoded_color, EncodedColor { r, g, b, a});
+
+
+            let input_color: EncodedColor = EncodedColor { r, g, b, a };
+            let input_str = input_color.to_string();
+            let output_color: EncodedColor = input_str.parse().unwrap();
+
+            prop_assert_eq!(output_color, EncodedColor { r, g, b, a});
+
         }
     }
 }
