@@ -8,6 +8,9 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(not(any(feature = "std", feature = "libm")))]
+compile_error!("either `libm` or `std` must be enabled.");
+
 use core::fmt;
 
 /// A color used in linear applications. On a technical level,
@@ -677,6 +680,11 @@ pub fn linear_to_encoded(input: f32) -> u8 {
         f.powf(e)
     }
 
+    #[cfg(not(any(feature = "std", feature = "libm")))]
+    fn powf(_f: f32, _e: f32) -> f32 {
+        panic!("This is a stubbed function")
+    }
+
     let encoded_f32 = if input >= 0.0031308 {
         1.055 * powf(input, 1.0 / 2.4) - 0.055
     } else {
@@ -978,11 +986,11 @@ mod tests {
 
         // and the big chungus, bincode
         let color = EncodedColor::new(44, 232, 8, 255);
-        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
+        let buff = bincode::serde::encode_to_vec(color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [44, 232, 8, 255]);
 
         let color = EncodedColor::new(200, 21, 22, 203);
-        let buff = bincode::serde::encode_to_vec(&color, bincode::config::standard()).unwrap();
+        let buff = bincode::serde::encode_to_vec(color, bincode::config::standard()).unwrap();
         assert_eq!(buff, [200, 21, 22, 203]);
         let round_trip_color: EncodedColor = bincode::serde::decode_from_slice(&buff, bincode::config::standard())
             .unwrap()
