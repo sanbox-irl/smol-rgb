@@ -10,19 +10,18 @@ A smol library for (s)Rgb color handling.
 To use this in your project, add this to your Cargo.toml:
 
 ```toml
-smol-rgb = "0.5.0"
+smol-rgb = "0.6.0"
 ```
 
 no-std is supported, but requires `libm` to work, like so:
 
 ```toml
-smol-rgb = { version = "0.5.0", default-features = false, features = ["libm", "colors"]  }
+smol-rgb = { version = "0.6.0", default-features = false, features = ["libm", "colors"]  }
 ```
 
 We also support four other features: `serde`, `bytemuck`, `rand`, and `colors`.
 
-`serde` support works across a variety of backends such as yaml, json, and bincode. `rand` support allows you to generate random colors at will. `colors` gives named constants for commonly used colors to `EncodedColor` and is enabled by
-default.
+`serde` support works across a variety of backends such as yaml, json, and bincode. `rand` support allows you to generate random colors at will. `colors` gives named constants for commonly used colors to `EncodedColor` and is enabled by default.
 
 ## Who is this library for?
 
