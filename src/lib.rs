@@ -195,23 +195,7 @@ impl EncodedColor {
     /// When the alpha is not provided in a 6-character (ignoring the possible `#` character),
     /// then it will be `0`.
     ///
-    /// The characters used must be valid hex digits, which is to say:
-    /// - `A..=F` or `a..=f`
-    /// - `0..=9`
-    ///
-    /// ```
-    /// use smol_rgb::EncodedColor;
-    ///
-    /// assert_eq!(EncodedColor::from_hex_code("FEEEED"), EncodedColor::new(254, 238, 237, 0));
-    /// assert_eq!(EncodedColor::from_hex_code("01090402"), EncodedColor::new(1, 9, 4, 2));
-    /// assert_eq!(EncodedColor::from_hex_code("A1B9C4D2"), EncodedColor::new(161, 185, 196, 210));
-    ///
-    /// // adding a `#` doesn't matter
-    /// assert_eq!(EncodedColor::from_hex_code("#FEEEED"), EncodedColor::from_hex_code("FEEEED"));
-    /// assert_eq!(EncodedColor::from_hex_code("#FEEEEDAA"), EncodedColor::new(254, 238, 237, 170));
-    /// ```
-    ///
-    /// See [`EncodedColor::try_from_hex_code`] for a non-panicking variant.
+    /// See [`EncodedColor::try_from_hex_code`] for a non-panicking variant with more information.
     pub const fn from_hex_code(input: &str) -> Self {
         match Self::try_from_hex_code(input) {
             Ok(v) => v,
@@ -437,11 +421,7 @@ impl fmt::Debug for EncodedColor {
 
 impl fmt::Display for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "r: {}, g: {}, b: {}, a: {}, {:x}{:x}{:x}{:x}",
-            self.r, self.g, self.b, self.a, self.r, self.g, self.b, self.a
-        )
+        write!(f, "{:02x}{:02x}{:02x}{:02x}", self.r, self.g, self.b, self.a)
     }
 }
 
