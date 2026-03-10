@@ -36,7 +36,7 @@ pub struct EncodedColor {
 
 impl Default for EncodedColor {
     fn default() -> Self {
-        Self::CLEAR
+        Self::new(0, 0, 0, 0)
     }
 }
 
@@ -828,7 +828,7 @@ mod tests {
 
     #[test]
     fn builders() {
-        let c = EncodedColor::WHITE;
+        let c = EncodedColor::new(255, 255, 255, 255);
         assert_eq!(c.with_r(128), EncodedColor::new(128, 255, 255, 255));
         assert_eq!(c.with_g(128), EncodedColor::new(255, 128, 255, 255));
         assert_eq!(c.with_b(128), EncodedColor::new(255, 255, 128, 255));
