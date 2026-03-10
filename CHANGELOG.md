@@ -1,5 +1,10 @@
 # Change Log
 
+### [0.6.0] - 2026-04-10
+
+- BREAKING: Changed [`EncodedColor::to_string`] to print hex-codes, which are now
+  correctly printed with leading 0s, which can then be parsed with [`EncodedColor::from_str`].
+
 ### [0.5.0] - 2025-12-28
 
 - BREAKING: Moved all named colors under a feature called "colors", which is
