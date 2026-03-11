@@ -125,8 +125,8 @@ impl EncodedColor {
     /// assert!(EncodedColor::try_from_hex_code("🦀🦀").is_err());
     /// ```
     pub const fn try_from_hex_code(input: &str) -> Result<Self, HexCodeParseErr> {
-        const fn parse_hex_tuple(big: u8, small: u8) -> Result<u8, BadHexCode> {
-            const fn parse_hex(input: u8) -> Result<u8, BadHexCode> {
+        const fn parse_hex_tuple(big: u8, small: u8) -> Result<u8, u8> {
+            const fn parse_hex(input: u8) -> Result<u8, u8> {
                 let output = match input {
                     b'0' => 0,
                     b'1' => 1,
@@ -144,8 +144,8 @@ impl EncodedColor {
                     b'D' | b'd' => 13,
                     b'E' | b'e' => 14,
                     b'F' | b'f' => 15,
-                    _ => {
-                        return Err(BadHexCode);
+                    other => {
+                        return Err(other);
                     }
                 };
 
@@ -183,10 +183,23 @@ impl EncodedColor {
             Ok(0)
         };
 
-        match (maybe_r, maybe_g, maybe_b, maybe_a) {
-            (Ok(r), Ok(g), Ok(b), Ok(a)) => Ok(Self { r, g, b, a }),
-            _ => Err(HexCodeParseErr::BadHexCode(BadHexCode)),
-        }
+        let r = match maybe_r {
+            Ok(v) => v,
+            Err(e) => return Err(HexCodeParseErr::BadHexCode(e)),
+        };
+        let g = match maybe_g {
+            Ok(v) => v,
+            Err(e) => return Err(HexCodeParseErr::BadHexCode(e)),
+        };
+        let b = match maybe_b {
+            Ok(v) => v,
+            Err(e) => return Err(HexCodeParseErr::BadHexCode(e)),
+        };
+        let a = match maybe_a {
+            Ok(v) => v,
+            Err(e) => return Err(HexCodeParseErr::BadHexCode(e)),
+        };
+        Ok(Self { r, g, b, a })
     }
 
     /// Convert a hex code, as a string, into an [`EncodedColor`] or panics.
@@ -682,19 +695,13 @@ pub fn linear_to_encoded(input: f32) -> u8 {
 pub enum HexCodeParseErr {
     /// Invalid hexcode decimal given. The only valid binary codes
     /// are `a..=f`, `A..=F`, and `0..=9`.
-    #[error(transparent)]
-    BadHexCode(#[from] BadHexCode),
+    #[error("invalid hexcode ({0}) given")]
+    BadHexCode(u8),
 
     /// str must be 8 or 6 bytes long, ignoring a leading `#`"
     #[error("str must be 8 or 6 bytes long, ignoring a leading `#`")]
     UnexpectedLength,
 }
-
-/// Invalid hexcode decimal given. The only valid binary codes
-/// are `a..=f`, `A..=F`, and `0..=9`.
-#[derive(Debug, thiserror::Error)]
-#[error("invalid hexcode given")]
-pub struct BadHexCode;
 
 #[cfg(feature = "bytemuck")]
 unsafe impl bytemuck::Pod for EncodedColor {}
@@ -739,7 +746,7 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
             type Value = EncodedColor;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a sequence of u8 colors")
+                formatter.write_str("a sequence or string of u8 colors")
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -764,9 +771,28 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
 
                 Ok(EncodedColor { r, g, b, a })
             }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                EncodedColor::try_from_hex_code(v).map_err(|e| match e {
+                    HexCodeParseErr::BadHexCode(hex_code) => serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Char(char::from(hex_code)),
+                        &"a character in the ranges `a..=f`, `A..=F`, and `0..=9`.",
+                    ),
+                    HexCodeParseErr::UnexpectedLength => {
+                        serde::de::Error::invalid_length(v.len(), &"a 6 or 8 byte string")
+                    }
+                })
+            }
         }
 
-        deserializer.deserialize_tuple_struct(ENCODED_NAME, 4, DeserializeColor)
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_any(DeserializeColor)
+        } else {
+            deserializer.deserialize_tuple_struct(ENCODED_NAME, 4, DeserializeColor)
+        }
     }
 }
 
@@ -1013,6 +1039,47 @@ mod tests {
             // and know the answer, please PR me!
             assert!(o.is_ok());
         }
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn serde_str() {
+        // json
+        let deserialized = serde_json::from_str("\"AABBCCDD\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 221), deserialized);
+
+        let deserialized = serde_json::from_str("\"#AABBCCDD\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 221), deserialized);
+
+        // yaml
+        let deserialized = serde_yaml::from_str("\"AABBCCDD\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 221), deserialized);
+
+        // json
+        let deserialized = serde_json::from_str("\"AABBCC\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 0), deserialized);
+
+        let deserialized = serde_json::from_str("\"#AABBCC\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 0), deserialized);
+
+        // yaml
+        let deserialized = serde_yaml::from_str("\"AABBCC\"").unwrap();
+        assert_eq!(EncodedColor::new(170, 187, 204, 0), deserialized);
+
+        // bad serds
+        let o = serde_yaml::from_str::<EncodedColor>("\"AABBCCDDEE\"");
+        assert!(o.is_err());
+        let o = serde_yaml::from_str::<EncodedColor>("\"AABB\"");
+        assert!(o.is_err());
+        let o = serde_yaml::from_str::<EncodedColor>("\"rrggbbaa\"");
+        assert!(o.is_err());
+
+        let o = serde_json::from_str::<EncodedColor>("\"AABBCCDDEE\"");
+        assert!(o.is_err());
+        let o = serde_json::from_str::<EncodedColor>("\"AABB\"");
+        assert!(o.is_err());
+        let o = serde_json::from_str::<EncodedColor>("\"rrggbbaa\"");
+        assert!(o.is_err());
     }
 
     proptest! {

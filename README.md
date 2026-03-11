@@ -37,7 +37,7 @@ This library, on the other hand, only works with sRGB, and is designed only to h
 
 ## It's not always RGB, but we can make it only sRGB
 
-Textures, color pickers (like egui or imgui's pickers) are generally in "encoded" sRGB. In this library, that means 4 u8s, each of which describe how much `r`, `g`, `b`, and `a` should be in an image. On a very technical level, this is a specification called IEC 61966-2-1:1999, but you should never remember this again. In this library, this space is called `EncodedColor`. If you use photoshop and use the color picker on a color (generally), the number you get out is going to be in encoded sRGB, which this library handles in EncodedColor. That "generally" might have worried you; unless you know you did something odd, however, it shouldn't. If you're authoring texture in Photoshop or in Aseprite, you'll be working in sRGB (unless you make it so you aren't, but don't do that).
+Textures, color pickers (like egui or imgui's pickers) are generally in "encoded" sRGB. In this library, that means 4 u8s, each of which describe how much `r`, `g`, `b`, and `a` should be in an image. On a very technical level, this is a specification called `IEC 61966-2-1:1999`, but in this library, this space is called `EncodedColor`. If you use photoshop and use the color picker on a color (generally), the number you get out is going to be in encoded sRGB, which this library handles in `EncodedColor`. That "generally" might have worried you; unless you know you did something odd, however, it shouldn't. If you're authoring textures in Photoshop or in Aseprite, you'll be working in sRGB (unless you make it so you aren't, but don't do that).
 
 Encoded sRGB is just the bee's knees, except that it's basically useless to _do_ things in. When you want to _blend_ colors (add them, multiply them, basically do anything to them), you need to convert those colors into "linear" space. In this library, we call this `LinearColor`. Whereas `EncodedColor` is just 4 u8s, `LinearColor` is 4 f32s, each of which has been transferred from "encoded" space to "linear" space. The more complete terms would be that they have been transferred from "encoded sRGB" to "linear sRGB", but don't think about it too much -- basically, now they're in a place where they can be mixed with each other.
 
@@ -54,6 +54,10 @@ The answer is yes! The GPU, when it samples a texture, will convert it into Line
 In two circumstances, for most programmers -- when you're blending colors yourself on the CPU, or when you're sending a color to a vertex or a uniform to be blended with another LinearColor color (like a sampled texture) on the GPU.
 
 You might think to yourself that you commonly sent colors before you read this in "what you're calling 'EncodedColor'" and it worked out just fine. That's probably true! Almost all games have some color error, because it's just so easy to do accidentally. However, I might point out that probably you or an artist just fiddled with the encoded color until it mixed correctly, so it looked more or less right on the GPU. Or perhaps there was some other weirdness going on!
+
+## `serde` implementation
+
+This library has a serde implementation for `EncodedColor`. It serializes to a tuple struct of `(red: u8, green: u8, blue: u8, alpha: u8)`, which will be a byte array in binary serializers and a sequence in human-readable formats. It can also deserialize this implementation. Additionally, it can deserialize hex-codes for colors as a string (such as `#rrggbbaa`), both via serde and also via a `const` function `EncodedColor::try_from_hex_code`.
 
 ## License
 
