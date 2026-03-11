@@ -1,6 +1,6 @@
 [package]
 name = "smol-rgb"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Jonathan Spira <jjspira@gmail.com>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
