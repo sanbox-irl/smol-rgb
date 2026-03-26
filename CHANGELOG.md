@@ -1,6 +1,6 @@
 # Change Log
 
-### [0.6.2] - 2026-04-10
+### [0.6.3] - 2026-04-10
 
 - Bumping dependencies.
 

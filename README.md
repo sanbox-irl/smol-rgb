@@ -10,7 +10,7 @@ A smol library for (s)Rgb color handling.
 To use this in your project, add this to your Cargo.toml:
 
 ```toml
-smol-rgb = "0.6.0"
+smol-rgb = "0.6.3"
 ```
 
 no-std is supported, but requires `libm` to work, like so:
