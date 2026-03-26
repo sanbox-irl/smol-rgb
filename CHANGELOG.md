@@ -1,5 +1,9 @@
 # Change Log
 
+### [0.6.2] - 2026-04-10
+
+- Bumping dependencies.
+
 ### [0.6.0] - 2026-04-10
 
 - BREAKING: Changed [`EncodedColor::to_string`] to print hex-codes, which are now
