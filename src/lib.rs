@@ -799,6 +799,8 @@ impl<'de> serde::Deserialize<'de> for EncodedColor {
 #[cfg(feature = "rand")]
 impl rand::distr::Distribution<EncodedColor> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EncodedColor {
+        use rand::RngExt;
+
         EncodedColor {
             r: rng.random(),
             g: rng.random(),
@@ -811,6 +813,8 @@ impl rand::distr::Distribution<EncodedColor> for rand::distr::StandardUniform {
 #[cfg(feature = "rand")]
 impl rand::distr::Distribution<LinearColor> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> LinearColor {
+        use rand::RngExt;
+
         LinearColor {
             r: rng.random(),
             g: rng.random(),
