@@ -244,15 +244,6 @@ impl EncodedColor {
         ]
     }
 
-    /// Creates an array representation of the color. This is useful for sending the color
-    /// to a uniform, but is the same memory representation as `Self`.
-    #[inline]
-    pub const fn to_array(self) -> [u8; 4] {
-        // safety: we test that the two types have the same size, alignment,
-        // and layout in our tests.
-        unsafe { core::mem::transmute(self) }
-    }
-
     /// Converts this color to an [f32; 4] array. This is **still in encoded
     /// space** but they are converted to an f32. This is mostly for compatability
     /// with other libraries which sometimes need to f32s even while in encoded sRGB.
@@ -263,30 +254,20 @@ impl EncodedColor {
     #[inline]
     pub const fn from_encoded_f32s(input: [f32; 4]) -> Self {
         Self::new(
-            (input[0] * 255.0) as u8,
-            (input[1] * 255.0) as u8,
-            (input[2] * 255.0) as u8,
-            (input[3] * 255.0) as u8,
+            (input[0] * 255.0).clamp(0.0, 255.0) as u8,
+            (input[1] * 255.0).clamp(0.0, 255.0) as u8,
+            (input[2] * 255.0).clamp(0.0, 255.0) as u8,
+            (input[3] * 255.0).clamp(0.0, 255.0) as u8,
         )
     }
 
-    /// Converts a packed u32 to an encoded rgba struct.
-    ///
-    /// Note, your colors must be in order of `red, green, blue, alpha`. For `bgra` support,
-    /// use `from_bgra_u32`.
-    ///
-    /// This function might also has issues on non-little endian platforms, but look, you're not
-    /// on one of those.
+    /// Creates an array representation of the color. This is useful for sending the color
+    /// to a uniform, but is the same memory representation as `Self`.
     #[inline]
-    pub const fn from_rgba_u32(input: u32) -> Self {
-        let bytes = input.to_ne_bytes();
-
-        Self {
-            r: bytes[3],
-            g: bytes[2],
-            b: bytes[1],
-            a: bytes[0],
-        }
+    pub const fn to_array(self) -> [u8; 4] {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { core::mem::transmute(self) }
     }
 
     /// Converts the encoded rgba struct to a packed u32 in `rgba` encoding.
@@ -298,33 +279,20 @@ impl EncodedColor {
     /// on one of those.
     #[inline]
     pub const fn to_rgba_u32(self) -> u32 {
-        let mut bytes = [0, 0, 0, 0];
-
-        bytes[3] = self.r;
-        bytes[2] = self.g;
-        bytes[1] = self.b;
-        bytes[0] = self.a;
-
-        u32::from_ne_bytes(bytes)
+        u32::from_ne_bytes([self.r, self.g, self.b, self.a])
     }
 
-    /// Converts a packed u32 to an encoded rgba struct. On little endian platforms, this is a
-    /// no-op.
+    /// Converts a packed u32 to an encoded rgba struct.
     ///
-    /// Note, your colors must be in order of `blue`, `green`, `red`, `alpha`.
+    /// Note, your colors must be in order of `red, green, blue, alpha`. For `bgra` support,
+    /// use `from_bgra_u32`.
     ///
     /// This function might also has issues on non-little endian platforms, but look, you're not
-    /// on one of those probably.
+    /// on one of those.
     #[inline]
-    pub const fn from_bgra_u32(input: u32) -> Self {
-        let bytes = input.to_ne_bytes();
-
-        Self {
-            r: bytes[1],
-            g: bytes[2],
-            b: bytes[3],
-            a: bytes[0],
-        }
+    pub const fn from_rgba_u32(input: u32) -> Self {
+        let [r, g, b, a] = input.to_ne_bytes();
+        Self { r, g, b, a }
     }
 
     /// Converts the encoded rgba struct to a packed u32 in `bgra` encoding.
@@ -336,24 +304,20 @@ impl EncodedColor {
     /// on one of those.
     #[inline]
     pub const fn to_bgra_u32(self) -> u32 {
-        let mut bytes = [0, 0, 0, 0];
-
-        bytes[1] = self.r;
-        bytes[2] = self.g;
-        bytes[3] = self.b;
-        bytes[0] = self.a;
-
-        u32::from_ne_bytes(bytes)
+        u32::from_ne_bytes([self.b, self.g, self.r, self.a])
     }
 
-    /// Recasts four u8s into `EncodedColor`
-    pub const fn from_bits_u32(value: u32) -> Self {
-        unsafe { core::mem::transmute(value) }
-    }
-
-    /// Recasts four u8s into `EncodedColor`
-    pub const fn from_bits(value: [u8; 4]) -> Self {
-        unsafe { core::mem::transmute(value) }
+    /// Converts a packed u32 to an encoded rgba struct. On little endian platforms, this is a
+    /// no-op.
+    ///
+    /// Note, your colors must be in order of `blue`, `green`, `red`, `alpha`.
+    ///
+    /// This function might also has issues on non-little endian platforms, but look, you're not
+    /// on one of those probably.
+    #[inline]
+    pub const fn from_bgra_u32(input: u32) -> Self {
+        let [b, g, r, a] = input.to_ne_bytes();
+        Self { r, g, b, a }
     }
 }
 
@@ -434,23 +398,7 @@ impl fmt::Debug for EncodedColor {
 
 impl fmt::Display for EncodedColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:02x}{:02x}{:02x}{:02x}", self.r, self.g, self.b, self.a)
-    }
-}
-
-impl fmt::LowerHex for EncodedColor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let val = self.to_rgba_u32();
-
-        fmt::LowerHex::fmt(&val, f)
-    }
-}
-
-impl fmt::UpperHex for EncodedColor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let val = self.to_rgba_u32();
-
-        fmt::UpperHex::fmt(&val, f)
+        write!(f, "#{:02x}{:02x}{:02x}{:02x}", self.r, self.g, self.b, self.a)
     }
 }
 
@@ -529,7 +477,7 @@ impl LinearColor {
         unsafe { core::mem::transmute(self.to_array()) }
     }
 
-    /// Recasts four u8s into floats. Note: these floats could be subnormal if these u8s
+    /// Recasts 16 u8s into linear color. Note: these floats could be subnormal if these u8s
     /// were produced incorrectly.
     pub const fn from_bits(value: [u8; 16]) -> Self {
         unsafe { core::mem::transmute(value) }
@@ -681,10 +629,7 @@ pub fn linear_to_encoded(input: f32) -> u8 {
         12.92 * input
     };
 
-    // this multiply to 256 is VERY odd! but otherwise,
-    // 1.0 cannot translate to 1.0. Weirdly, this seems fine actually
-    // in tests.
-    (encoded_f32 * 256.0) as u8
+    (encoded_f32 * 255.0).round() as u8
 }
 
 /// An error generated from parsing a hex code.
@@ -878,8 +823,8 @@ mod tests {
 
     #[test]
     fn from_u32s() {
-        let cornwall_blue_in_rgba: u32 = 0x6b9ebeff;
-        let cornwall_blue_in_bgra: u32 = 0xbe9e6bff;
+        let cornwall_blue_in_rgba: u32 = u32::from_le(0xffbe9e6b);
+        let cornwall_blue_in_bgra: u32 = u32::from_le(0xff6b9ebe);
         let cornwall_encoded = EncodedColor {
             r: 107,
             g: 158,
@@ -893,16 +838,6 @@ mod tests {
         let encoded_bgra = EncodedColor::from_bgra_u32(cornwall_blue_in_bgra);
         assert_eq!(encoded_bgra, cornwall_encoded);
         assert_eq!(encoded_bgra.to_bgra_u32(), cornwall_blue_in_bgra);
-
-        #[cfg(feature = "std")]
-        {
-            // and finally, check the hex...
-            let rgba_as_hex = std::format!("{:x}", encoded_rgba);
-            assert_eq!(rgba_as_hex, "6b9ebeff");
-
-            let rgba_as_hex = std::format!("{:#X}", encoded_rgba);
-            assert_eq!(rgba_as_hex, "0x6B9EBEFF");
-        }
     }
 
     #[test]
@@ -1108,15 +1043,29 @@ mod tests {
         assert!(o.is_err());
     }
 
+    #[cfg(feature = "std")]
+    #[test]
+    fn simple_hex() {
+        use std::string::ToString;
+
+        let c = EncodedColor::new(255, 16, 32, 240).to_string();
+        assert_eq!(c, "#ff1020f0");
+
+        let c = EncodedColor::from_hex_code("#feeeed");
+        assert_eq!(c, EncodedColor::new(254, 238, 237, 0));
+    }
+
     proptest! {
         #[test]
         #[cfg(feature = "std")]
+        #[cfg(not(miri))]
         fn parse_string_no_crash(s in "\\PC*") {
             let _: Result<EncodedColor, _> = s.parse();
         }
 
         #[test]
         #[cfg(feature = "std")]
+        #[cfg(not(miri))]
         fn parses_date_back_to_original(r in 0u8..=255,
                                         g in 0u8..=255,
                                         b in 0u8..=255,
@@ -1124,7 +1073,7 @@ mod tests {
         ) {
             use std::string::ToString;
 
-            let encoded_color: EncodedColor = std::format!("{:02x}{:02x}{:02x}{:02x}", r, g, b, a).parse().unwrap();
+            let encoded_color: EncodedColor = std::format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a).parse().unwrap();
             prop_assert_eq!(encoded_color, EncodedColor { r, g, b, a});
 
 
