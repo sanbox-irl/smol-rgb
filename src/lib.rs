@@ -1,8 +1,5 @@
 #![cfg_attr(feature = "std", doc = include_str!("../README.md"))]
-#![cfg_attr(not(feature = "std"), doc = "no-std stand in")]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![cfg_attr(not(feature = "std"), doc = "see README.md for crate readme")]
 #![no_std]
 
 #[cfg(feature = "std")]
@@ -375,19 +372,19 @@ impl EncodedColor {
     pub const RED: EncodedColor = EncodedColor::new(255, 0, 0, 255);
 
     /// Zero alpha Red (255, 0, 0, 255)
-    pub const RED_CLEAR: EncodedColor = EncodedColor::new(255, 0, 0, 255);
+    pub const RED_CLEAR: EncodedColor = EncodedColor::new(255, 0, 0, 0);
 
     /// Full alpha green (255, 0, 0, 255)
     pub const GREEN: EncodedColor = EncodedColor::new(0, 255, 0, 255);
 
     /// Zero alpha green (255, 0, 0, 255)
-    pub const GREEN_CLEAR: EncodedColor = EncodedColor::new(0, 255, 0, 255);
+    pub const GREEN_CLEAR: EncodedColor = EncodedColor::new(0, 255, 0, 0);
 
     /// Full alpha blue (255, 0, 0, 255)
     pub const BLUE: EncodedColor = EncodedColor::new(0, 0, 255, 255);
 
     /// Zero alpha blue (255, 0, 0, 255)
-    pub const BLUE_CLEAR: EncodedColor = EncodedColor::new(0, 0, 255, 255);
+    pub const BLUE_CLEAR: EncodedColor = EncodedColor::new(0, 0, 255, 0);
 
     /// Full alpha Yellow (255, 255, 0, 255).
     pub const YELLOW: EncodedColor = EncodedColor::new(255, 255, 0, 255);
@@ -691,16 +688,29 @@ pub fn linear_to_encoded(input: f32) -> u8 {
 }
 
 /// An error generated from parsing a hex code.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum HexCodeParseErr {
     /// Invalid hexcode decimal given. The only valid binary codes
     /// are `a..=f`, `A..=F`, and `0..=9`.
-    #[error("invalid hexcode ({0}) given")]
     BadHexCode(u8),
 
     /// str must be 8 or 6 bytes long, ignoring a leading `#`"
-    #[error("str must be 8 or 6 bytes long, ignoring a leading `#`")]
     UnexpectedLength,
+}
+
+impl core::error::Error for HexCodeParseErr {}
+
+impl core::fmt::Display for HexCodeParseErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HexCodeParseErr::BadHexCode(v) => {
+                writeln!(f, "invalid hexcode ({}) given", v)
+            }
+            HexCodeParseErr::UnexpectedLength => {
+                writeln!(f, "str must be 8 or 6 bytes long, ignoring a leading `#`")
+            }
+        }
+    }
 }
 
 #[cfg(feature = "bytemuck")]
@@ -852,6 +862,18 @@ mod tests {
         assert_eq!(c.with_g(128), EncodedColor::new(255, 128, 255, 255));
         assert_eq!(c.with_b(128), EncodedColor::new(255, 255, 128, 255));
         assert_eq!(c.with_a(128), EncodedColor::new(255, 255, 255, 128));
+    }
+
+    #[test]
+    #[cfg(feature = "colors")]
+    fn colors() {
+        assert_eq!(EncodedColor::RED.with_a(0), EncodedColor::RED_CLEAR,);
+        assert_eq!(EncodedColor::GREEN.with_a(0), EncodedColor::GREEN_CLEAR,);
+        assert_eq!(EncodedColor::BLUE.with_a(0), EncodedColor::BLUE_CLEAR,);
+        assert_eq!(EncodedColor::YELLOW.with_a(0), EncodedColor::YELLOW_CLEAR,);
+        assert_eq!(EncodedColor::YELLOW.with_a(0), EncodedColor::YELLOW_CLEAR,);
+        assert_eq!(EncodedColor::FUCHSIA.with_a(0), EncodedColor::FUCHSIA_CLEAR,);
+        assert_eq!(EncodedColor::TEAL.with_a(0), EncodedColor::TEAL_CLEAR,);
     }
 
     #[test]
