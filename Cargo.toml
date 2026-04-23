@@ -1,6 +1,6 @@
 [package]
 name = "smol-rgb"
-version = "0.6.3"
+version = "0.7.0"
 authors = ["Jonathan Spira <jjspira@gmail.com>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -12,10 +12,9 @@ categories = ["rendering::data-formats", "game-development"]
 default = ["std", "colors"]
 colors = []
 std = []
-bytemuck = ["dep:bytemuck"]
 
 [dependencies]
-libm = { version = "0.2.1", optional = true }
+libm = { version = "0.2.16", optional = true }
 bytemuck = { version = "1.25", optional = true }
 serde = { version = "1.0", optional = true }
 rand = { version = "0.10", optional = true }

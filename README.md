@@ -10,13 +10,13 @@ A smol library for (s)Rgb color handling.
 To use this in your project, add this to your Cargo.toml:
 
 ```toml
-smol-rgb = "0.6.3"
+smol-rgb = "0.7.0"
 ```
 
 no-std is supported, but requires `libm` to work, like so:
 
 ```toml
-smol-rgb = { version = "0.6.0", default-features = false, features = ["libm", "colors"]  }
+smol-rgb = { version = "0.7.0", default-features = false, features = ["libm", "colors"]  }
 ```
 
 We also support four other features: `serde`, `bytemuck`, `rand`, and `colors`.
@@ -57,7 +57,7 @@ You might think to yourself that you commonly sent colors before you read this i
 
 ## `serde` implementation
 
-This library has a serde implementation for `EncodedColor`. It serializes to a tuple struct of `(red: u8, green: u8, blue: u8, alpha: u8)`, which will be a byte array in binary serializers and a sequence in human-readable formats. It can also deserialize this implementation. Additionally, it can deserialize hex-codes for colors as a string (such as `#rrggbbaa`), both via serde and also via a `const` function `EncodedColor::try_from_hex_code`.
+This library has a serde implementation for `EncodedColor`. It serializes to a human readable hex string. It can also deserialize this implementation, in addition to a sequence like `[110, 200, 255, 255]`. Additionally, it can deserialize hex-codes for colors as a string (such as `#rrggbbaa`), both via serde and also via a `const` function `EncodedColor::try_from_hex_code`.
 
 ## License
 

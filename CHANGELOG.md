@@ -1,5 +1,13 @@
 # Change Log
 
+### [0.7.0] - 2026-04-23
+
+- BREAKING: Reworked all transmutes, removed some odd ones, and made the library resistant
+  big endian layouts.
+- BREAKING: [`EncodedColor::to_string`] now prints a leading `#`.
+- Added [`LinearColor::lerp`].
+- Added far more testing
+
 ### [0.6.3] - 2026-04-10
 
 - Bumping dependencies.
