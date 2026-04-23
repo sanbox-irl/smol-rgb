@@ -270,6 +270,13 @@ impl EncodedColor {
         unsafe { core::mem::transmute(self) }
     }
 
+    /// Recasts four u8s into `EncodedColor`
+    pub const fn from_array(value: [u8; 4]) -> Self {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { core::mem::transmute(value) }
+    }
+
     /// Converts the encoded rgba struct to a packed u32 in `rgba` encoding.
     ///
     /// This will output your colors in order of `red, green, blue, alpha`. For `bgra` support,
@@ -460,13 +467,21 @@ impl LinearColor {
     }
 
     /// Creates an array representation of the color. This is useful for sending the color
-    /// to a uniform, but is the same memory representation as `Self`. [LinearColor] also implements
+    /// to a uniform, but is the same memory representation as `Self`. [`LinearColor`] also implements
     /// Into, but this function is often more convenient.
     #[inline]
     pub const fn to_array(self) -> [f32; 4] {
         // safety: we test that the two types have the same size, alignment,
         // and layout in our tests.
         unsafe { core::mem::transmute(self) }
+    }
+
+    /// Converts an array of floats into a [`LinearColor`]
+    #[inline]
+    pub const fn from_array(input: [f32; 4]) -> LinearColor {
+        // safety: we test that the two types have the same size, alignment,
+        // and layout in our tests.
+        unsafe { core::mem::transmute(input) }
     }
 
     /// Encodes the 4 floats as 16 u8s. This is useful for sending the color
@@ -481,6 +496,22 @@ impl LinearColor {
     /// were produced incorrectly.
     pub const fn from_bits(value: [u8; 16]) -> Self {
         unsafe { core::mem::transmute(value) }
+    }
+
+    /// Lerps, or mixes, this color with another color by a given factor, or "alpha". An alpha of
+    /// `0.5` will be the exact middle of these two colors, while `0.0` will give `self` and `1.0`
+    /// will give `other`.
+    ///
+    /// Note: `alpha` will be clamped to a number between `0.0` and `1.0`.
+    pub const fn lerp(self, other: Self, alpha: f32) -> Self {
+        let alpha = alpha.clamp(0.0, 1.0);
+
+        Self {
+            r: self.r * (1.0 - alpha) + other.r * alpha,
+            g: self.g * (1.0 - alpha) + other.g * alpha,
+            b: self.b * (1.0 - alpha) + other.b * alpha,
+            a: self.a * (1.0 - alpha) + other.a * alpha,
+        }
     }
 }
 
@@ -645,7 +676,7 @@ pub enum HexCodeParseErr {
 
 impl core::error::Error for HexCodeParseErr {}
 
-impl core::fmt::Display for HexCodeParseErr {
+impl fmt::Display for HexCodeParseErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HexCodeParseErr::BadHexCode(v) => {
@@ -1055,6 +1086,34 @@ mod tests {
         assert_eq!(c, EncodedColor::new(254, 238, 237, 0));
     }
 
+    #[test]
+    fn simple_lerp() {
+        let a = LinearColor::new(0.5, 0.3, 0.2, 1.0);
+        let b = LinearColor::new(0.8, 0.2, 0.2, 0.5);
+
+        assert_eq!(
+            a.lerp(b, 0.5),
+            LinearColor::new(
+                (0.8 + 0.5) * 0.5,
+                (0.2 + 0.3) * 0.5,
+                (0.2 + 0.2) * 0.5,
+                (0.5 + 1.0) * 0.5,
+            )
+        );
+
+        assert_eq!(a.lerp(b, 0.0), a,);
+        assert_eq!(a.lerp(b, 1.0), b,);
+    }
+
+    #[test]
+    fn encoded_linear() {
+        let enc = EncodedColor::new(255, 128, 0, 40).to_encoded_f32s();
+        assert_eq!(enc[0], 1.0);
+        approx::assert_abs_diff_eq!(enc[1], 0.5, epsilon = 0.01);
+        approx::assert_abs_diff_eq!(enc[2], 0.0, epsilon = 0.01);
+        approx::assert_abs_diff_eq!(enc[3], 0.15, epsilon = 0.01);
+    }
+
     proptest! {
         #[test]
         #[cfg(feature = "std")]
@@ -1082,7 +1141,104 @@ mod tests {
             let output_color: EncodedColor = input_str.parse().unwrap();
 
             prop_assert_eq!(output_color, EncodedColor { r, g, b, a});
+        }
 
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn parse_to_linear_and_back(r in 0u8..=255,
+                                        g in 0u8..=255,
+                                        b in 0u8..=255,
+                                        a in 0u8..=255
+        ) {
+            let encoded = EncodedColor::new(r, g, b, a);
+            let linear = encoded.to_linear();
+            assert_eq!(linear.to_encoded(), encoded);
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn parse_to_encoded_and_back(r in 0.0f32..=1.0,
+                                        g in 0.0f32..=1.0,
+                                        b in 0.0f32..=1.0,
+                                        a in 0.0f32..=1.0,
+        ) {
+            let linear = LinearColor::new(r, g, b, a);
+            let linear_again = linear.to_encoded().to_linear();
+
+            approx::assert_relative_eq!(linear_again.r, linear.r, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.g, linear.g, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.b, linear.b, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.a, linear.a, epsilon = 0.01);
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn parse_to_encoded_f32s_and_back(r in 0u8..=255,
+                                        g in 0u8..=255,
+                                        b in 0u8..=255,
+                                        a in 0u8..=255
+        ) {
+            let enc = EncodedColor::new(r, g, b, a);
+            let enc_again = EncodedColor::from_encoded_f32s(enc.to_encoded_f32s());
+
+            assert_eq!(enc, enc_again);
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn linear_transmutes(r in 0.0f32..=1.0,
+                                        g in 0.0f32..=1.0,
+                                        b in 0.0f32..=1.0,
+                                        a in 0.0f32..=1.0,
+        ) {
+            let linear = LinearColor::new(r, g, b, a);
+            let linear_again = LinearColor::from_array(linear.to_array());
+
+            approx::assert_relative_eq!(linear_again.r, linear.r, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.g, linear.g, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.b, linear.b, epsilon = 0.01);
+            approx::assert_relative_eq!(linear_again.a, linear.a, epsilon = 0.01);
+
+            let linear = LinearColor::new(r, g, b, a);
+            let linear_again = LinearColor::from_bits(linear.to_bits());
+
+            assert_eq!(linear_again.r, linear.r);
+            assert_eq!(linear_again.g, linear.g);
+            assert_eq!(linear_again.b, linear.b);
+            assert_eq!(linear_again.a, linear.a);
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn encoded_transmutes(r in 0u8..=255,
+                                        g in 0u8..=255,
+                                        b in 0u8..=255,
+                                        a in 0u8..=255
+        ) {
+            let enc = EncodedColor::new(r, g, b, a);
+            let enc_again = EncodedColor::from_array(enc.to_array());
+
+            assert_eq!(enc, enc_again);
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn check_from_into(r in 0u8..=255,
+                                        g in 0u8..=255,
+                                        b in 0u8..=255,
+                                        a in 0u8..=255
+        ) {
+            let enc = EncodedColor::new(r, g, b, a);
+            let linear = enc.to_linear();
+
+            assert_eq!(enc, linear.into());
+            assert_eq!(linear, enc.into());
         }
     }
 }
