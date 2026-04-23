@@ -20,9 +20,12 @@ jobs:
           components: clippy
           toolchain: stable
           override: true
+      - uses: taiki-e/install-action@cargo-mutants
       - name: clippy
         run: cargo clippy
       - name: test normal
         run: cargo test
       - name: test no-std
         run: cargo test --features=libm,serde,bytemuck,colors --no-default-features
+      - name: mutation testing
+        run: cargo mutants -- --features=serde,bytemuck,colors,rand

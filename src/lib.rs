@@ -5,8 +5,25 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(not(any(feature = "std", feature = "libm")))]
-compile_error!("either `libm` or `std` must be enabled.");
+cfg_select! {
+    feature = "std" => {
+        fn powf(f: f32, e: f32) -> f32 {
+            f.powf(e)
+        }
+        
+        fn roundf(f: f32) -> f32 {
+            f.round()
+        }
+    }
+
+    feature = "libm" => {
+        use libm::{powf, roundf};
+    }
+    
+    _ => {
+        compile_error!("either the feature `libm` or `std` must be enabled.");
+    }
+}
 
 use core::fmt;
 
@@ -569,36 +586,35 @@ impl From<EncodedColor> for LinearColor {
 /// However, in the interest of simplicity, I have left the math which does the conversion commented
 /// within this function call, if you're like to see the math.
 pub const fn encoded_to_linear(c: u8) -> f32 {
-    ENCODED_TO_LINEAR_LUT[c as usize]
-
     // If you want to see the encoded to linear function written out (ie, how I made this LUT),
     // it looks like this here:
     //
     // pub fn encoded_to_linear(input: u8) -> f32 {
-    // #[cfg(feature = "libm")]
-    // use libm::powf;
+    //      #[cfg(feature = "libm")]
+    //      use libm::powf;
     //
-    // #[cfg(feature = "std")]
-    // fn powf(f: f32, e: f32) -> f32 {
-    // f.powf(e)
-    // }
+    //      #[cfg(feature = "std")]
+    //      fn powf(f: f32, e: f32) -> f32 {
+    //           f.powf(e)
+    //      }
     //
-    // let input = input as f32 / 255.0;
+    //      let input = input as f32 / 255.0;
     //
-    // if input >= 0.04045 {
-    // powf((input + 0.055) / 1.055, 2.4)
-    // } else {
-    // input / 12.92
-    // }
+    //      if input >= 0.04045 {
+    //           powf((input + 0.055) / 1.055, 2.4)
+    //      } else {
+    //           input / 12.92
+    //      }
     // }
     //
     // Thank you very much to @thomcc (@zurr on discord) for helping me with this!
+
+    ENCODED_TO_LINEAR_LUT[c as usize]
 }
 
 /// This is the LUT that we use. You shouldn't really ever need to use directly, but `encoded_to_linear`
 /// is just a wrapper to index into this LUT.
-///
-/// I have chosen to inline write this, rather than use a build script, because it's a bit simpler.
+// I have chosen to inline write this, rather than use a build script, because it's a bit simpler.
 #[rustfmt::skip]
 pub const ENCODED_TO_LINEAR_LUT: [f32; 256] = [
     0.0, 0.000303527, 0.000607054, 0.000910581, 0.001214108, 0.001517635, 0.001821162, 0.0021246888,
@@ -641,26 +657,13 @@ pub const ENCODED_TO_LINEAR_LUT: [f32; 256] = [
 /// transfer functions.
 // const requires powf to be const, which it is not
 pub fn linear_to_encoded(input: f32) -> u8 {
-    #[cfg(feature = "libm")]
-    use libm::powf;
-
-    #[cfg(feature = "std")]
-    fn powf(f: f32, e: f32) -> f32 {
-        f.powf(e)
-    }
-
-    #[cfg(not(any(feature = "std", feature = "libm")))]
-    fn powf(_f: f32, _e: f32) -> f32 {
-        panic!("This is a stubbed function")
-    }
-
     let encoded_f32 = if input >= 0.0031308 {
         1.055 * powf(input, 1.0 / 2.4) - 0.055
     } else {
         12.92 * input
     };
 
-    (encoded_f32 * 255.0).round() as u8
+    roundf(encoded_f32 * 255.0) as u8
 }
 
 /// An error generated from parsing a hex code.
@@ -1074,8 +1077,17 @@ mod tests {
         assert!(o.is_err());
     }
 
-    #[cfg(feature = "std")]
     #[test]
+    #[cfg(feature = "serde")]
+    #[cfg(feature = "std")]
+    fn serde_failure() {
+        use std::string::ToString;
+        let e = serde_json::from_str::<EncodedColor>("{}").unwrap_err();
+        assert!(e.to_string().contains("a sequence or string of u8 colors"));
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
     fn simple_hex() {
         use std::string::ToString;
 
@@ -1112,6 +1124,26 @@ mod tests {
         approx::assert_abs_diff_eq!(enc[1], 0.5, epsilon = 0.01);
         approx::assert_abs_diff_eq!(enc[2], 0.0, epsilon = 0.01);
         approx::assert_abs_diff_eq!(enc[3], 0.15, epsilon = 0.01);
+    }
+
+    #[test]
+    #[cfg(feature = "rand")]
+    fn encoded_rand_test() {
+        let colors: [EncodedColor; 100] = core::array::from_fn(|_| rand::random());
+        assert!(
+            colors.iter().any(|c| *c != colors[0]),
+            "there should be some variation in colors"
+        )
+    }
+
+    #[test]
+    #[cfg(feature = "rand")]
+    fn linear_rand_test() {
+        let colors: [LinearColor; 100] = core::array::from_fn(|_| rand::random());
+        assert!(
+            colors.iter().any(|c| *c != colors[0]),
+            "there should be some variation in colors"
+        )
     }
 
     proptest! {
@@ -1239,6 +1271,20 @@ mod tests {
 
             assert_eq!(enc, linear.into());
             assert_eq!(linear, enc.into());
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        #[cfg(not(miri))]
+        fn lut_is_accurate(c_input in 0u8..=255) {
+            let input = c_input as f32 / 255.0;
+            let output = if input >= 0.04045 {
+                super::powf((input + 0.055) / 1.055, 2.4)
+            } else {
+                input / 12.92
+            };
+
+            approx::assert_abs_diff_eq!(ENCODED_TO_LINEAR_LUT[c_input as usize], output, epsilon = 0.01);
         }
     }
 }
